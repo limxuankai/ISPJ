@@ -3,5 +3,13 @@ a{
 }
 
 body{
-    background-color: darkgray;
+    background-color: whitesmoke;
+}
+
+p{
+    font-family:Arial, Helvetica, sans-serif
+}
+
+h1{
+    text-decoration: underline;
 }
