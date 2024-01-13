@@ -3,6 +3,16 @@ import json
 import sqlite3
 import datetime
 
+import docx2txt
+import pandas as pd
+import nltk
+from nltk.corpus import stopwords
+from nltk.tokenize import word_tokenize
+from sklearn.feature_extraction.text import CountVectorizer
+from sklearn.model_selection import train_test_split
+from sklearn.naive_bayes import MultinomialNB
+from sklearn.metrics import accuracy_score
+
 from flask import Flask, redirect, request, url_for,render_template,abort,flash
 from flask_login import (
     LoginManager,
@@ -13,6 +23,7 @@ from flask_login import (
 )
 from oauthlib.oauth2 import WebApplicationClient
 import requests
+import classification
 from db import init_db_command
 from user import User
 import logging
