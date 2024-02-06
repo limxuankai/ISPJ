@@ -17,7 +17,8 @@ from db import init_db_command
 from user import User
 import logging
 from logging.handlers import RotatingFileHandler
-
+from test import generatekey, Evaluate_Key
+from encryption import encrypt, decrypt
 app = Flask(__name__)
 
 app.logger.setLevel(logging.INFO)
@@ -39,7 +40,7 @@ GOOGLE_DISCOVERY_URL = (
 
 login_manager = LoginManager()
 login_manager.init_app(app)
-
+app.config['UPLOAD_FOLDER'] = 'static/files/'
 try:
     init_db_command()
 except sqlite3.OperationalError:
@@ -116,8 +117,15 @@ def callback():
 @app.route('/dashboard', methods=['GET','POST'])
 @login_required
 def dashboard():
-    app.logger.info(f'{current_user.name} has logged in')
+    app.logger.info(f'{current_user.name} has arrived at dashboard')
     return render_template("dashboard.html")
+
+@app.route('/info')
+@login_required
+def info():
+    app.logger.info(f'{current_user.name} is viewing account info')
+    return render_template("info.html", info={"Name":current_user.name, "Email":current_user.email}, pic=current_user.profile_pic)
+
 
 @app.route("/logout")
 @login_required
@@ -131,5 +139,72 @@ def aboutus():
     app.logger.info("Guest has arrived about us")
     return render_template("aboutus.html")
 
+@app.route('/files')
+@login_required
+def files():
+    app.logger.info(f'{current_user.name} is uploading files')
+    return render_template("upload.html")
+
+
+@app.route('/success', methods=['POST'])
+@login_required
+def upload_file():
+    if request.method == 'POST':   
+        f = request.files['file'] 
+        file_path = os.path.join(app.config['UPLOAD_FOLDER'], f.filename)
+        f.save(file_path)   
+        app.logger.info(f'{current_user.name} uploaded {f.filename}')
+        server_key, client_table, client_key, server_table = generatekey()
+        with open('client_side.txt', "w") as client_file:
+            client_file.write(client_key + '\n')
+            client_file.write(','.join(client_table))
+        with open('server_side.txt', "w") as server_file:
+            server_file.write(server_key + '\n')
+            server_file.write(','.join(server_table))
+    return render_template('success.html', file_path= file_path, filename = f.filename)
+
+@app.route('/encryption')
+@login_required
+def encryption():
+    with open('client_side.txt', 'r') as client_file:
+        lines = client_file.readlines()
+        client_key = lines[0]
+        client_table = lines[1]
+    with open('server_side.txt', 'r') as server_file:
+        lines = server_file.readlines()
+        server_key = lines[0]
+        server_table = lines[1]
+    formatted_client_list = [item.strip(',') for item in list(client_table) if item.strip(',') != '']
+    formatted_server_list = [item.strip(',') for item in list(server_table) if item.strip(',') != '']
+    KEY = Evaluate_Key(server_key, formatted_server_list, client_key, formatted_client_list)
+    with open('static/files/20240205_190306.jpg', 'rb') as plain:
+        Encrypted = encrypt(plain.read(), KEY)
+    file_path = app.config['UPLOAD_FOLDER']
+    with open('static/files/encrypted.jpg', 'wb') as e:
+        e.write(Encrypted)
+    
+    return render_template('encryption.html', Encrypted_File = 'static/files/encrypted.jpg')
+
+@app.route('/decryption')
+@login_required
+def decryption():
+    with open('client_side.txt', 'r') as client_file:
+        lines = client_file.readlines()
+        client_key = lines[0]
+        client_table = lines[1]
+    with open('server_side.txt', 'r') as server_file:
+        lines = server_file.readlines()
+        server_key = lines[0]
+        server_table = lines[1]
+    formatted_client_list = [item.strip(',') for item in list(client_table) if item.strip(',') != '']
+    formatted_server_list = [item.strip(',') for item in list(server_table) if item.strip(',') != '']
+    KEY = Evaluate_Key(server_key, formatted_server_list, client_key, formatted_client_list)
+    with open('static/files/encrypted.jpg', 'rb') as cipher:
+        Decrypted = decrypt(cipher.read(), KEY)
+    file_path = app.config['UPLOAD_FOLDER']
+    with open('static/files/decrypted.jpg', 'wb') as e:
+        e.write(Decrypted)
+    
+    return render_template('decryption.html', Decrypted_File = 'static/files/decrypted.jpg')
 if __name__ == '__main__':
     app.run(debug=True, ssl_context="adhoc")
