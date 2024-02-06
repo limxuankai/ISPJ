@@ -3,28 +3,12 @@ from qiskit import QuantumCircuit, ClassicalRegister, QuantumRegister, execute, 
 from qiskit.tools.visualization import plot_histogram
 from sympy import Integer
 
-def generatekey():
-    n = 16
-    qr = QuantumRegister(n, name='qr')
-    cr = ClassicalRegister(n, name='cr')
 
-    alice = QuantumCircuit(qr, cr, name='Alice')
-    alice_key = np.random.randint(0, high=2**16)
-    alice_key = np.binary_repr(alice_key, n)
+n = 16
+qr = QuantumRegister(n, name='qr')
+cr = ClassicalRegister(n, name='cr')
 
-    for index, digit in enumerate(alice_key):
-        if digit == '1':
-            alice.x(qr[index])
-
-    alice_table = []        # Create empty basis table
-    for index in range(len(qr)):       # BUG: enumerate(q) raises an out of range error
-        if 0.5 < np.random.random():   # With 50% chance...
-            alice.h(qr[index])         # ...change to diagonal basis
-            alice_table.append('X')    # character for diagonal basis
-        else:
-            alice_table.append('Z') # character for computational basis
-
-    def SendState(qc1, qc2, qc1_name):
+def SendState(qc1, qc2, qc1_name):
         ''' This function takes the output of a circuit qc1 (made up only of x and 
             h gates and initializes another circuit qc2 with the same state
         ''' 
@@ -49,74 +33,74 @@ def generatekey():
             else:
                 raise Exception('Unable to parse instruction')
 
-    bob = QuantumCircuit(qr, cr, name='Bob')
+def generatekey():
+    Client = QuantumCircuit(qr, cr, name='Client')
+    Client_key = np.random.randint(0, high=2**16)
+    Client_key = np.binary_repr(Client_key, n)
+    for index, digit in enumerate(Client_key):
+        if digit == '1':
+            Client.x(qr[index])
 
-    SendState(alice, bob, 'Alice')    
-
-    # Bob doesn't know which basis to use
-    bob_table = []
-    for index in range(len(qr)): 
-        if 0.5 < np.random.random():  # With 50% chance...
-            bob.h(qr[index])        # ...change to diagonal basis
-            bob_table.append('X')
+    Client_table = []        # Create empty basis table
+    for index in range(len(qr)):       
+        if 0.5 < np.random.random():  
+            Client.h(qr[index])         
+            Client_table.append('X')    
         else:
-            bob_table.append('Z')
+            Client_table.append('Z') 
+     
+
+    Server = QuantumCircuit(qr, cr, name='Server')
+
+    SendState(Client, Server, 'Client')    
+    Server_table = []
+    for index in range(len(qr)): 
+        if 0.5 < np.random.random():  
+            Server.h(qr[index])        
+            Server_table.append('X')
+        else:
+            Server_table.append('Z')
 
     # Measure all qubits
     for index in range(len(qr)): 
-        bob.measure(qr[index], cr[index])
-        
+        Server.measure(qr[index], cr[index])
     # Execute the quantum circuit 
     backend = BasicAer.get_backend('qasm_simulator')    
-    result = execute(bob, backend=backend, shots=1).result()
-    # Result of the measure is Bob's key candidate
-    bob_key = list(result.get_counts(bob))[0]
-    bob_key = bob_key[::-1]      # key is reversed so that first qubit is the first element of the list
+    result = execute(Server, backend=backend, shots=1).result()
+    Server_key = list(result.get_counts(Server))[0]
+    Server_key = Server_key[::-1]      
+    return Server_key, Server_table, Client_key, Client_table
+
+def Evaluate_Key(Server_key, Server_table, Client_key, Client_table):
     keep = []
     discard = []
-    for qubit, basis in enumerate(zip(alice_table, bob_table)):
+    for qubit, basis in enumerate(zip(Client_table, Server_table)):
         if basis[0] == basis[1]:
-            print("Same choice for qubit: {}, basis: {}" .format(qubit, basis[0])) 
             keep.append(qubit)
         else:
-            print("Different choice for qubit: {}, Alice has {}, Bob has {}" .format(qubit, basis[0], basis[1]))
             discard.append(qubit)
 
     acc = 0
-    for bit in zip(alice_key, bob_key):
+    for bit in zip(Client_key, Server_key):
         if bit[0] == bit[1]:
             acc += 1
 
-    print('Percentage of qubits to be discarded according to table comparison: ', len(keep)/n)
-    print('Measurement convergence by additional chance: ', acc/n)   
-    new_alice_key = [alice_key[qubit] for qubit in keep]
-    new_bob_key = [bob_key[qubit] for qubit in keep]
+    new_Client_key = [Client_key[qubit] for qubit in keep]
+    new_Server_key = [Server_key[qubit] for qubit in keep]
 
     acc = 0
-    for bit in zip(new_alice_key, new_bob_key):
+    for bit in zip(new_Client_key, new_Server_key):
         if bit[0] == bit[1]:
             acc += 1        
             
-    print('Percentage of similarity between the keys: ', acc/len(new_alice_key))      
 
-    if (acc//len(new_alice_key) == 1):
-        print("Key exchange has been successfull")
-        print("New Alice's key: ", new_alice_key)
-        print("New Bob's key: ", new_bob_key)
-    else:
-        print("Key exchange has been tampered! Check for eavesdropper or try again")
-        print("New Alice's key is invalid: ", new_alice_key)
-        print("New Bob's key is invalid: ", new_bob_key)
+    new_Client_key, new_Server_key = ''.join(new_Client_key), ''.join(new_Server_key)
 
-    new_alice_key, new_bob_key = ''.join(new_alice_key), ''.join(new_bob_key)
-    print(new_alice_key, new_bob_key)
-
-    Key =  (256 // len(new_alice_key)+1)* new_alice_key
-    print( Key[0:256])
+    Key =  (256 // len(new_Client_key)+1)* new_Client_key
     bytes_representation = bytearray()
     for i in range(0, len(Key[0:256]), 8):
         chunk = Key[i:i+8]
         byte_value = int(chunk, 2)
         bytes_representation.append(byte_value)
     return bytes_representation
-generatekey()
+
