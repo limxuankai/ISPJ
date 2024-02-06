@@ -2,7 +2,7 @@ import os
 import json
 import sqlite3
 import datetime
-import boto3
+
 import docx2txt
 import pandas as pd
 import nltk
@@ -31,7 +31,7 @@ import logging
 from logging.handlers import RotatingFileHandler
 import mysql.connector
 from test import generatekey, Evaluate_Key
-from encryption import encrypt, decrypt
+#from encryption import encrypt, decrypt
 app = Flask(__name__)
 IPAddr = "104.196.231.172"
 
@@ -155,9 +155,25 @@ def aboutus():
 
 @app.route('/files')
 def files():
-    return render_template("files.html")
+        try:
+            print(current_user.email)
+            Connection_Database = mysql.connector.connect(host=IPAddr, user="root", database="ispj", password="")
+            Cursor = Connection_Database.cursor()
+            query = f"SELECT UserLevel FROM users WHERE User = '{current_user.email}'"
+            Cursor.execute(query)
+            UserLevel = Cursor.fetchone()
+            query = f"SELECT FileID, FileName, Status, AccessLevel FROM documents WHERE AccessLevel <= {UserLevel}"
+            Cursor.execute(query)
+            filedetails = Cursor.fetchall()
+            for filedetail in filedetails:
+                print(filedetail[0],filedetail[1],filedetail[2])
+            Cursor.close()
+            Connection_Database.close()
+        except Exception as e:
+            print (f"Error: {e}")
+        return render_template("files.html")
 
-fileid = 0
+
 @app.route('/upload', methods=['POST'])
 def upload():
     # AWS credentials and S3 bucket information
@@ -175,13 +191,12 @@ def upload():
             print('still testing')
             # s3 = boto3.client('s3', aws_access_key_id=aws_access_key_id, aws_secret_access_key=aws_secret_access_key, region_name=region_name)
             # s3.upload_fileobj(uploaded_file, bucket_name, uploaded_file.filename)
-            fileid = fileid + 1
         except Exception as e:
             print(f'Failed to upload: {e}')
         try:
-            Connection_Database = mysql.connector.connect(host=IPAddr, user="root", database="ispj")
+            Connection_Database = mysql.connector.connect(host=IPAddr, user="root", database="ispj", password="")
             Cursor = Connection_Database.cursor()
-            query = f"INSERT INTO documents VALUES FileName = {uploaded_file.filename}, Status = 'BeforeML', FileID = {uuid.uuid4()};"
+            query = f"INSERT INTO documents VALUES ('{uuid.uuid4()}','uploaded_file.filename','BeforeML',0)"
             Cursor.execute(query)
             Connection_Database.commit()
             Cursor.close()
@@ -247,6 +262,7 @@ def generate_presigned_url(s3_client, bucket, key, expiration_time, content_disp
 #         return f"File successfully uploaded. Public URL: {object_url}"
 
 #     return "No file selected."
+
 @login_required
 def files():
     app.logger.info(f'{current_user.name} is uploading files')
