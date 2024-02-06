@@ -2,7 +2,6 @@ import os
 import json
 import sqlite3
 import datetime
-
 import docx2txt
 import pandas as pd
 import nltk
@@ -25,6 +24,7 @@ from flask_login import (
 from oauthlib.oauth2 import WebApplicationClient
 import requests
 import classification
+from filedetailidk import *
 from db import init_db_command
 from user import User
 import logging
@@ -153,8 +153,29 @@ def aboutus():
     app.logger.info("Guest has arrived about us")
     return render_template("aboutus.html")
 
+@app.route('/admindashboard')
+def admindashboard():
+    accessliste = []
+    try:
+        app.logger.info("admin access admin dashboard")
+        Connection_Database = mysql.connector.connect(host=IPAddr, user="root", database="ispj", password="")
+        Cursor = Connection_Database.cursor()
+        query = f"SELECT FileID, FileName, Status, AccessLevel FROM documents WHERE Status = 'AfterML'"
+        Cursor.execute(query)
+        changeaccess = Cursor.fetchall()
+        print("got access level")
+        for row in changeaccess:
+            accessliste.append(docdetail(row[0], row[1], row[2], row[3]))
+            print("in for loop")
+        Cursor.close()
+        Connection_Database.close()
+    except Exception as e:
+        print (f"dashboard Error: {e}")
+    return render_template("admin.html", accessliste = accessliste)
+
 @app.route('/files')
 def files():
+        fileliste = []
         try:
             print(current_user.email)
             Connection_Database = mysql.connector.connect(host=IPAddr, user="root", database="ispj", password="")
@@ -162,16 +183,21 @@ def files():
             query = f"SELECT UserLevel FROM users WHERE User = '{current_user.email}'"
             Cursor.execute(query)
             UserLevel = Cursor.fetchone()
-            query = f"SELECT FileID, FileName, Status, AccessLevel FROM documents WHERE AccessLevel <= {UserLevel}"
+            UserLevel = UserLevel[0]
+            print(UserLevel)
+            # query = f"SELECT FileID, FileName, Status, AccessLevel FROM documents WHERE AccessLevel <= {UserLevel}"
+            query = f"SELECT FileID, FileName, Status, AccessLevel FROM documents WHERE AccessLevel <= 3"
             Cursor.execute(query)
-            filedetails = Cursor.fetchall()
-            for filedetail in filedetails:
-                print(filedetail[0],filedetail[1],filedetail[2])
+            filedetailss = Cursor.fetchall()
+            print("got filedetails")
+            for row in filedetailss:
+                fileliste.append(docdetail(row[0], row[1], row[2], row[3]))
+                print("in for loop")
             Cursor.close()
             Connection_Database.close()
         except Exception as e:
             print (f"Error: {e}")
-        return render_template("files.html")
+        return render_template("files.html", fileliste=fileliste)
 
 
 @app.route('/upload', methods=['POST'])

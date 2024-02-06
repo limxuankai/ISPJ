@@ -1,0 +1,16 @@
+{% extends "dashboard.html" %}
+{% block title %}Q-Box admin{% endblock %}
+
+{% block content %}
+<body>
+    {% for i in accessliste %} 
+    <div style="display: flex;padding-top:100px">
+        
+                <div>{{i.get_fileid()}} <br></div>
+                <div>{{i.get_filename()}} </div>
+                <div>{{i.get_accesslevel()}}</div>
+        </div>  
+        
+    {% endfor %}
+</body>
+{% endblock %}

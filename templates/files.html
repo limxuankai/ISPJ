@@ -3,7 +3,6 @@
 
 {% block content %}
 <body>
-    <h1>Upload File to S3</h1>
 
     <form action="/upload" method="post" enctype="multipart/form-data">
         <label for="file">Choose a file:</label>
@@ -11,5 +10,45 @@
         <br>
         <button type="submit">Upload</button>
     </form>
+
+    
+<div style="display: flex; flex-direction: column;">
+
+    {% for i in fileliste %} 
+    <div style="display: flex;">
+        {% if i.get_accesslevel() == "3" %}
+                <div>{{i.get_fileid()}} <br></div>
+                <div>{{i.get_filename()}} </div>
+                <div>{{i.get_status()}} </div>
+                <div>{{i.get_accesslevel()}}</div>
+        </div>  
+        {% endif %}
+    {% endfor %}
+
+    {% for i in fileliste %}
+    <div style="display: flex;">
+        {% if i.get_accesslevel() == "2" %}
+                <div>{{i.get_fileid()}} </div>
+                <div>{{i.get_filename()}} </div>
+                <div>{{i.get_status()}} </div>
+                <div>{{i.get_accesslevel()}} </div>
+    </div>
+       {% endif %}
+    {% endfor %}
+
+    {% for i in fileliste %} 
+        <div style="display: flex;"></div>
+        {% if i.get_accesslevel() == "1" %}
+           
+                <div>{{i.get_fileid()}} </div>
+                <div>{{i.get_filename()}} </div>
+                <div>{{i.get_status()}} </div>
+                <div>{{i.get_accesslevel()}} </div>
+        </div>
+        {% endif %}
+    {% endfor %}
+
+</div>
+
 </body>
 {% endblock %}
