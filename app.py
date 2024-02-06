@@ -146,7 +146,6 @@ def aboutus():
 
 @app.route('/files')
 def files():
-
     return render_template("files.html")
 
 fileid = 0
@@ -173,7 +172,7 @@ def upload():
         try:
             Connection_Database = mysql.connector.connect(host=IPAddr, user="root", database="ispj")
             Cursor = Connection_Database.cursor()
-            query = f"INSERT INTO documents VALUES FileName = {uploaded_file.filename}, Status = 'BeforeML', FileID = {fileid};"
+            query = f"INSERT INTO documents VALUES FileName = {uploaded_file.filename}, Status = 'BeforeML', FileID = {uuid.uuid4()};"
             Cursor.execute(query)
             Connection_Database.commit()
             Cursor.close()
