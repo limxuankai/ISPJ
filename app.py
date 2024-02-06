@@ -2,7 +2,7 @@ import os
 import json
 import sqlite3
 import datetime
-
+import boto3
 import docx2txt
 import pandas as pd
 import nltk
@@ -12,7 +12,7 @@ from sklearn.feature_extraction.text import CountVectorizer
 from sklearn.model_selection import train_test_split
 from sklearn.naive_bayes import MultinomialNB
 from sklearn.metrics import accuracy_score
-
+from datetime import datetime, timedelta
 from flask import Flask, redirect, request, url_for,render_template,abort,flash
 from flask_login import (
     LoginManager,
@@ -28,8 +28,9 @@ from db import init_db_command
 from user import User
 import logging
 from logging.handlers import RotatingFileHandler
-
+import mysql.connector
 app = Flask(__name__)
+IPAddr = "104.196.231.172"
 
 app.logger.setLevel(logging.INFO)
 for handler in app.logger.handlers[:]:
@@ -142,5 +143,88 @@ def aboutus():
     app.logger.info("Guest has arrived about us")
     return render_template("aboutus.html")
 
+@app.route('/files')
+def files():
+
+    return render_template("files.html")
+
+@app.route('/upload', methods=['POST'])
+def upload():
+    # AWS credentials and S3 bucket information
+    aws_access_key_id = 'AKIA2LOZ4RPA6DWSOH3Q'
+    aws_secret_access_key = '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'
+    region_name = 'ap-southeast-2'
+    bucket_name = 'documents-for-ispj'
+
+    # Get the uploaded file from the form
+    uploaded_file = request.files['file']
+
+    # Check if a file is selected
+    if uploaded_file.filename != '':
+        Connection_Database = mysql.connector.connect(host=IPAddr, user="root", database="ispj")
+        Cursor = Connection_Database.cursor()
+        # s3 = boto3.client('s3', aws_access_key_id=aws_access_key_id, aws_secret_access_key=aws_secret_access_key, region_name=region_name)
+        # s3.upload_fileobj(uploaded_file, bucket_name, uploaded_file.filename)
+        
+
+        # download_presigned_url = generate_presigned_url(s3, bucket_name, uploaded_file.filename, expiration_time=180, content_disposition='attachment; filename="' + uploaded_file.filename + '"')
+        # preview_presigned_url = generate_presigned_url(s3, bucket_name, uploaded_file.filename, expiration_time=180, content_disposition='inline')
+
+        # print(f"downloading: {download_presigned_url}")
+        # print(f"previewing: {preview_presigned_url}")
+
+        # return f"File successfully uploaded.<br>Download URL (valid for 3 minutes): {download_presigned_url}<br>Preview URL (valid for 3 minutes): {preview_presigned_url}"
+
+    return "No file selected."
+
+def generate_presigned_url(s3_client, bucket, key, expiration_time, content_disposition='inline'):
+    # Generate a pre-signed URL for the S3 object with a specific expiration time
+    url = s3_client.generate_presigned_url(
+        'get_object',
+        Params={'Bucket': bucket, 'Key': key, 'ResponseContentDisposition': content_disposition},
+        ExpiresIn=expiration_time,
+        
+    )
+    return url
+
+
+# @app.route('/upload', methods=['POST'])
+# def upload():
+#     # AWS credentials and S3 bucket information
+#     aws_access_key_id = 'AKIA2LOZ4RPA6DWSOH3Q'
+#     aws_secret_access_key = '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'
+#     region_name = 'ap-southeast-2'
+#     bucket_name = 'documents-for-ispj'
+
+#     # Get the uploaded file from the form
+#     uploaded_file = request.files['image']
+
+#     # Check if a file is selected
+#     if uploaded_file.filename != '':
+#         # Create an S3 client
+#         s3 = boto3.client('s3', aws_access_key_id=aws_access_key_id, aws_secret_access_key=aws_secret_access_key, region_name=region_name)
+
+#         # Upload the file to S3
+#         s3.upload_fileobj(uploaded_file, bucket_name, uploaded_file.filename)
+
+#         # Make the uploaded object public
+#         s3.copy_object(
+#             Bucket=bucket_name,
+#             CopySource={'Bucket': bucket_name, 'Key': uploaded_file.filename},
+#             Key=uploaded_file.filename,
+#             MetadataDirective='REPLACE',
+#             ContentType='image/jpg',
+#             Metadata={'Content-Disposition': 'inline'}
+#         )
+#         s3.put_object_acl(ACL='public-read', Bucket=bucket_name, Key=uploaded_file.filename)
+
+#         # Get the public URL of the object
+#         object_url = f"https://{bucket_name}.s3.{region_name}.amazonaws.com/{uploaded_file.filename}"
+
+#         print(f"The public URL of the image for preview is: {object_url}")
+
+#         return f"File successfully uploaded. Public URL: {object_url}"
+
+#     return "No file selected."
 if __name__ == '__main__':
     app.run(debug=True, ssl_context="adhoc")
