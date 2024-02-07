@@ -2,7 +2,7 @@ import os
 import json
 import sqlite3
 import datetime
-
+import boto3
 import docx2txt
 import pandas as pd
 import nltk
@@ -31,7 +31,9 @@ import logging
 from logging.handlers import RotatingFileHandler
 import mysql.connector
 from test import generatekey, Evaluate_Key
-#from encryption import encrypt, decrypt
+from encryption import encrypt, decrypt
+import io
+
 app = Flask(__name__)
 IPAddr = "104.196.231.172"
 
@@ -153,7 +155,9 @@ def aboutus():
     app.logger.info("Guest has arrived about us")
     return render_template("aboutus.html")
 
+
 @app.route('/files')
+@login_required
 def files():
         try:
             print(current_user.email)
@@ -175,46 +179,50 @@ def files():
 
 
 @app.route('/upload', methods=['POST'])
+@login_required
 def upload():
-    # AWS credentials and S3 bucket information
     aws_access_key_id = 'AKIA2LOZ4RPA6DWSOH3Q'
     aws_secret_access_key = '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'
     region_name = 'ap-southeast-2'
     bucket_name = 'documents-for-ispj'
 
-    # Get the uploaded file from the form
     uploaded_file = request.files['file']
-
-    # Check if a file is selected
+    server_key, server_table, client_key, client_table = generatekey()
+    KEY = Evaluate_Key(server_key, server_table, client_key, client_table)
+    encryted_file = uploaded_file.read()
+    encryted_file = encrypt(encryted_file, KEY)
+    encrypted_file = io.BytesIO(encryted_file)
+    server_table = (','.join(server_table))
+   
     if uploaded_file.filename != '':
         try:
             print('still testing')
-            # s3 = boto3.client('s3', aws_access_key_id=aws_access_key_id, aws_secret_access_key=aws_secret_access_key, region_name=region_name)
-            # s3.upload_fileobj(uploaded_file, bucket_name, uploaded_file.filename)
+            s3 = boto3.client('s3', aws_access_key_id=aws_access_key_id, aws_secret_access_key=aws_secret_access_key, region_name=region_name)
+            s3.upload_fileobj(encrypted_file, bucket_name, uploaded_file.filename)
         except Exception as e:
             print(f'Failed to upload: {e}')
         try:
             Connection_Database = mysql.connector.connect(host=IPAddr, user="root", database="ispj", password="")
             Cursor = Connection_Database.cursor()
-            query = f"INSERT INTO documents VALUES ('{uuid.uuid4()}','uploaded_file.filename','BeforeML',0)"
+            query = f"INSERT INTO documents VALUES ('{uuid.uuid4()}','uploaded_file.filename','BeforeML',0, '{server_key}', '{server_table}')"
             Cursor.execute(query)
             Connection_Database.commit()
             Cursor.close()
             Connection_Database.close()
         except Exception as e:
             print(f'Failed to update: {e}')
-        # download_presigned_url = generate_presigned_url(s3, bucket_name, uploaded_file.filename, expiration_time=180, content_disposition='attachment; filename="' + uploaded_file.filename + '"')
-        # preview_presigned_url = generate_presigned_url(s3, bucket_name, uploaded_file.filename, expiration_time=180, content_disposition='inline')
+        download_presigned_url = generate_presigned_url(s3, bucket_name, uploaded_file.filename, expiration_time=180, content_disposition='attachment; filename="' + uploaded_file.filename + '"')
+        preview_presigned_url = generate_presigned_url(s3, bucket_name, uploaded_file.filename, expiration_time=180, content_disposition='inline')
 
-        # print(f"downloading: {download_presigned_url}")
-        # print(f"previewing: {preview_presigned_url}")
+        print(f"downloading: {download_presigned_url}")
+        print(f"previewing: {preview_presigned_url}")
 
-        # return f"File successfully uploaded.<br>Download URL (valid for 3 minutes): {download_presigned_url}<br>Preview URL (valid for 3 minutes): {preview_presigned_url}"
+        return f"File successfully uploaded.<br>Download URL (valid for 3 minutes): {download_presigned_url}<br>Preview URL (valid for 3 minutes): {preview_presigned_url}"
 
     return "No file selected."
 
 def generate_presigned_url(s3_client, bucket, key, expiration_time, content_disposition='inline'):
-    # Generate a pre-signed URL for the S3 object with a specific expiration time
+    #Generate a pre-signed URL for the S3 object with a specific expiration time
     url = s3_client.generate_presigned_url(
         'get_object',
         Params={'Bucket': bucket, 'Key': key, 'ResponseContentDisposition': content_disposition},
@@ -222,7 +230,6 @@ def generate_presigned_url(s3_client, bucket, key, expiration_time, content_disp
 
     )
     return url
-
 
 # @app.route('/upload', methods=['POST'])
 # def upload():
@@ -262,11 +269,6 @@ def generate_presigned_url(s3_client, bucket, key, expiration_time, content_disp
 #         return f"File successfully uploaded. Public URL: {object_url}"
 
 #     return "No file selected."
-
-@login_required
-def files():
-    app.logger.info(f'{current_user.name} is uploading files')
-    return render_template("upload.html")
 
 
 @app.route('/success', methods=['POST'])
