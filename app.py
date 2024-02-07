@@ -6,6 +6,7 @@ import docx2txt
 import pandas as pd
 import nltk
 import uuid
+import boto3
 from nltk.corpus import stopwords
 from nltk.tokenize import word_tokenize
 from sklearn.feature_extraction.text import CountVectorizer
@@ -185,8 +186,8 @@ def files():
             UserLevel = Cursor.fetchone()
             UserLevel = UserLevel[0]
             print(UserLevel)
-            # query = f"SELECT FileID, FileName, Status, AccessLevel FROM documents WHERE AccessLevel <= {UserLevel}"
-            query = f"SELECT FileID, FileName, Status, AccessLevel FROM documents WHERE AccessLevel <= 3"
+            query = f"SELECT FileID, FileName, Status, AccessLevel FROM documents WHERE AccessLevel <= {UserLevel}"
+            # query = f"SELECT FileID, FileName, Status, AccessLevel FROM documents WHERE AccessLevel <= 3"
             Cursor.execute(query)
             filedetailss = Cursor.fetchall()
             print("got filedetails")
@@ -210,13 +211,13 @@ def upload():
 
     # Get the uploaded file from the form
     uploaded_file = request.files['file']
-
+    print(uploaded_file.filename)
     # Check if a file is selected
-    if uploaded_file.filename != '':
+    # if uploaded_file.filename != '':
+    if 1 == 1:
         try:
-            print('still testing')
-            # s3 = boto3.client('s3', aws_access_key_id=aws_access_key_id, aws_secret_access_key=aws_secret_access_key, region_name=region_name)
-            # s3.upload_fileobj(uploaded_file, bucket_name, uploaded_file.filename)
+            s3 = boto3.client('s3', aws_access_key_id=aws_access_key_id, aws_secret_access_key=aws_secret_access_key, region_name=region_name)
+            s3.upload_fileobj(uploaded_file, bucket_name, uploaded_file.filename)
         except Exception as e:
             print(f'Failed to upload: {e}')
         try:
@@ -229,6 +230,7 @@ def upload():
             Connection_Database.close()
         except Exception as e:
             print(f'Failed to update: {e}')
+        print("successfully updated")
         # download_presigned_url = generate_presigned_url(s3, bucket_name, uploaded_file.filename, expiration_time=180, content_disposition='attachment; filename="' + uploaded_file.filename + '"')
         # preview_presigned_url = generate_presigned_url(s3, bucket_name, uploaded_file.filename, expiration_time=180, content_disposition='inline')
 
@@ -236,8 +238,23 @@ def upload():
         # print(f"previewing: {preview_presigned_url}")
 
         # return f"File successfully uploaded.<br>Download URL (valid for 3 minutes): {download_presigned_url}<br>Preview URL (valid for 3 minutes): {preview_presigned_url}"
-
+        return redirect(url_for('dashboard'))
     return "No file selected."
+
+@app.route('/presigned', methods=['GET','POST'])
+def presigned():
+    # AWS credentials and S3 bucket information
+    aws_access_key_id = 'AKIA2LOZ4RPA6DWSOH3Q'
+    aws_secret_access_key = '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'
+    region_name = 'ap-southeast-2'
+    bucket_name = 'documents-for-ispj'
+
+    filename = request.args.get('filename')
+    print(filename)
+
+    s3 = boto3.client('s3', aws_access_key_id=aws_access_key_id, aws_secret_access_key=aws_secret_access_key, region_name=region_name)
+    preview_presigned_url = generate_presigned_url(s3, bucket_name, filename, expiration_time=180, content_disposition='inline')
+    return redirect(preview_presigned_url, code=302)
 
 def generate_presigned_url(s3_client, bucket, key, expiration_time, content_disposition='inline'):
     # Generate a pre-signed URL for the S3 object with a specific expiration time
