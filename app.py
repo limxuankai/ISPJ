@@ -221,31 +221,67 @@ def upload():
     encrypted_file = io.BytesIO(encryted_file)
     server_table = (','.join(server_table))
 
-    if uploaded_file.filename != '':
+    if uploaded_file.filename != '':       
+        Connection_Database = mysql.connector.connect(host=IPAddr, user="root", database="ispj", password="")
+        Cursor = Connection_Database.cursor()
+        query = f"SELECT * FROM documents WHERE FileName = '{uploaded_file.filename}'"
+        Cursor.execute(query)
+        result = Cursor.fetchone()
+        if result:
+            popup = """
+            <script>
+                alert('duplicate name detected');
+            </script>
+            """
+            return render_template('files.html', popup=popup)
+        Cursor.close()
+        Connection_Database.close()
+        
+        
         try:
             print('still testing')
             s3 = boto3.client('s3', aws_access_key_id=aws_access_key_id, aws_secret_access_key=aws_secret_access_key, region_name=region_name)
             s3.upload_fileobj(encrypted_file, bucket_name, uploaded_file.filename)
         except Exception as e:
             print(f'Failed to upload: {e}')
+            popup = """
+            <script>
+                alert('Upload failed!');
+            </script>
+            """
+            return render_template('files.html', popup=popup)
         try:
             Connection_Database = mysql.connector.connect(host=IPAddr, user="root", database="ispj", password="")
             Cursor = Connection_Database.cursor()
-            query = f"INSERT INTO documents VALUES ('{uuid.uuid4()}','uploaded_file.filename','BeforeML',0, '{server_key}', '{server_table}')"
+            query = f"INSERT INTO documents (FileID, FileName, Status, AccessLevel, Qubits, List) VALUES ('{uuid.uuid4()}','{uploaded_file.filename}','BeforeML',0, '{server_key}', '{server_table}')"
             Cursor.execute(query)
             Connection_Database.commit()
             Cursor.close()
             Connection_Database.close()
+            print("successfully updated")
+            popup = """
+            <script>
+                alert('Upload successful!');
+            </script>
+            """
+            return render_template('files.html', popup=popup)
         except Exception as e:
-            print(f'Failed to update: {e}')
-        print("successfully updated")
+            print(f'Failed to update db: {e}')
+            popup = """
+            <script>
+                alert('update failed');
+            </script>
+            """
+            return render_template('files.html', popup=popup)
+        
+
+
         # download_presigned_url = generate_presigned_url(s3, bucket_name, uploaded_file.filename, expiration_time=180, content_disposition='attachment; filename="' + uploaded_file.filename + '"')
         # preview_presigned_url = generate_presigned_url(s3, bucket_name, uploaded_file.filename, expiration_time=180, content_disposition='inline')
 
         
 
         # return f"File successfully uploaded.<br>Download URL (valid for 3 minutes): {download_presigned_url}<br>Preview URL (valid for 3 minutes): {preview_presigned_url}"
-        return redirect(url_for('dashboard'))
     return "No file selected."
 
 @app.route('/presigned', methods=['GET','POST'])

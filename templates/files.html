@@ -12,6 +12,7 @@
 {% endblock %}
 <body>
     {% block content %}
+    {{ popup | safe }}
     <form action="/upload" method="post" enctype="multipart/form-data" style="margin-top: 70px;">
         <label for="file">Choose a file:</label>
         <input type="file" name="file" id="file" accept=".jpg, .jpeg, .png, .pdf, .docx" required>
