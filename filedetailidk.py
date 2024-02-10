@@ -27,6 +27,6 @@ class docdetail:
         return self.__AccessLevel
 
     def set_accesslevel(self, value):
-        self.__article_content = value
+        self.__AccessLevel = value
 
     

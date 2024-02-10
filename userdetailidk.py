@@ -1,32 +1,32 @@
-class docdetail:
-    def __init__(self, FileID, FileName, Status, AccessLevel):
-        self.__FileID = FileID
-        self.__FileName = FileName
-        self.__Status = Status
-        self.__AccessLevel = AccessLevel
+class userdetail:
+    def __init__(self, User, UserRole, UserLevel, id):
+        self.__User = User
+        self.__UserRole = UserRole
+        self.__UserLevel = UserLevel
+        self.__id = id
     
-    def get_fileid(self):
-        return self.__FileID
+    def get_user(self):
+        return self.__User
 
-    def set_fileid(self, value):
-        self.__FileID = value
+    def set_user(self, value):
+        self.__User = value
 
-    def get_filename(self):
-        return self.__FileName
+    def get_userrole(self):
+        return self.__UserRole
 
-    def set_filename(self, value):
-        self.__FileName = value
+    def set_userrole(self, value):
+        self.__UserRole = value
 
-    def get_status(self):
-        return self.__Status
+    def get_userlevel(self):
+        return self.__UserLevel
 
-    def set_status(self, value):
-        self.__Status = value
+    def set_userlevel(self, value):
+        self.__UserLevel = value
 
-    def get_accesslevel(self):
-        return self.__AccessLevel
+    def get_id(self):
+        return self.__id
 
-    def set_accesslevel(self, value):
-        self.__article_content = value
+    def set_id(self, value):
+        self.__id = value
 
     

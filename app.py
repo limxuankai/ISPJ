@@ -27,6 +27,7 @@ from oauthlib.oauth2 import WebApplicationClient
 import requests
 import classification
 from filedetailidk import *
+from userdetailidk import *
 from db import init_db_command
 from user import User
 import logging
@@ -160,6 +161,7 @@ def aboutus():
 @app.route('/admindashboard')
 def admindashboard():
     accessliste = []
+    useraccessliste = []
     try:
         app.logger.info("admin access admin dashboard")
         Connection_Database = mysql.connector.connect(host=IPAddr, user="root", database="ispj", password="")
@@ -170,10 +172,21 @@ def admindashboard():
         for row in changeaccess:
             accessliste.append(docdetail(row[0], row[1], row[2], row[3]))
         Cursor.close()
+        Cursor = Connection_Database.cursor()
+        Connection_Database.close()
+
+        Connection_Database = mysql.connector.connect(host=IPAddr, user="root", database="ispj", password="")
+        Cursor = Connection_Database.cursor()
+        query_2 = "SELECT User, UserRole, UserLevel, id FROM users WHERE UserRole = 'User'"
+        Cursor.execute(query_2)
+        result_set_2 = Cursor.fetchall()
+        for row in result_set_2:
+            useraccessliste.append(userdetail(row[0], row[1], row[2], row[3]))
+        Cursor.close()
         Connection_Database.close()
     except Exception as e:
         print (f"dashboard Error: {e}")
-    return render_template("admin.html", accessliste = accessliste)
+    return render_template("admin.html", accessliste = accessliste, useraccessliste = useraccessliste)
 
 
 
@@ -187,6 +200,29 @@ def update_fileaccess():
         Connection_Database = mysql.connector.connect(host=IPAddr, user="root", database="ispj", password="")
         Cursor = Connection_Database.cursor()
         update_query = f"UPDATE documents SET AccessLevel = '{selected_accesslevel}' WHERE FileID = '{fileid}'"
+        Cursor.execute(update_query)
+        Connection_Database.commit()
+        Cursor.close()
+        Connection_Database.close()
+        # Your existing code to update the database based on fileid and selected_accesslevel
+
+        # Assuming you want to return some response data (e.g., JSON)
+        
+        return jsonify({"success": str("success")})
+    except Exception as e:
+        print(e)
+        return jsonify({"error": "failed"})
+    
+@app.route('/update_useraccess', methods=['POST'])
+def update_useraccess():
+    try:
+        userid = request.form['userid']
+        print(f"userid={userid}")
+        selected_userlevel = request.form['useraccess']
+        print(f"selected user level={selected_userlevel}")
+        Connection_Database = mysql.connector.connect(host=IPAddr, user="root", database="ispj", password="")
+        Cursor = Connection_Database.cursor()
+        update_query = f"UPDATE users SET UserLevel = '{selected_userlevel}' WHERE id = '{userid}'"
         Cursor.execute(update_query)
         Connection_Database.commit()
         Cursor.close()
