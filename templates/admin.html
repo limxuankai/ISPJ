@@ -10,24 +10,61 @@
 {% block navbar %}
 {% include 'includes/acc_nav.html' %} 
 {% endblock %}
-<body>
 {% block content %}
+<body>
+
+    {{ popup | safe }}
     <h2 style="padding-top: 60px;">change file access level</h2>
     {% for i in accessliste %} 
+    
     <div style="display: flex">
-                <div style="padding-right: 20px;">{{i.get_fileid()}} <br></div>
-                <div style="padding-right: 20px;">{{i.get_filename()}} </div>
-                <form action="{{ url_for('update_fileaccess') }}" method="post">
-                    <label for="fileaccess">Select Access Level:</label>
-                    <select name="fileaccess" id="fileaccess">
-                        <option value="1" {% if i.get_accesslevel() == 1 %} selected {% endif %}>1</option>
-                        <option value="2" {% if i.get_accesslevel() == 2 %} selected {% endif %}>2</option>
-                        <option value="3" {% if i.get_accesslevel() == 3 %} selected {% endif %}>3</option>
-                    </select>
-                    <button type="submit">Update</button>
-                </form>
-        </div>  
-    {% endfor %}
+        <div style="padding-right: 20px;">{{i.get_fileid()}} <br></div>
+        <div style="padding-right: 20px;">{{i.get_filename()}} </div>
+        <form id="updateForm_{{i.get_fileid()}}" onsubmit="updateFileAccess(event, '{{i.get_fileid()}}')">
+            <label for="fileaccess">Select Access Level:</label>
+            <select name="fileaccess" id="fileaccess">
+                <option value="1" {% if i.get_accesslevel() == 1 %} selected {% endif %}>1</option>
+                <option value="2" {% if i.get_accesslevel() == 2 %} selected {% endif %}>2</option>
+                <option value="3" {% if i.get_accesslevel() == 3 %} selected {% endif %}>3</option>
+            </select>
+            
+            <!-- Hidden input for FileID -->
+            <input type="hidden" name="fileid" value="{{ i.get_fileid() }}">
+            
+            <button type="submit">Update</button>
+        </form>
+    </div>  
+{% endfor %}
+        
     <h2 style="padding-top: 10px;">change user access level</h2>
-{% endblock %}
+
 </body>
+<script>
+    function updateFileAccess(event, fileid) {
+        event.preventDefault(); // Prevent the default form submission
+        const formElement = event.target;
+        // Get form data
+        const formData = new FormData(formElement);
+
+        // Perform asynchronous (AJAX) request
+        fetch('/update_fileaccess', {
+            method: 'POST',
+            body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data["success"] === "success") {
+                location.reload();
+                alert('Update successful!');
+                }
+            if (data["error"] === "failed") {
+                location.reload();
+                alert('Update failed!');
+                }
+            // Handle the response data as needed
+            console.log(data);
+        })
+        .catch(error => console.error('Error:', error));
+    }
+</script>
+{% endblock %}

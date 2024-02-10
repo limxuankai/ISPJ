@@ -15,7 +15,7 @@ from sklearn.model_selection import train_test_split
 from sklearn.naive_bayes import MultinomialNB
 from sklearn.metrics import accuracy_score
 from datetime import datetime, timedelta
-from flask import Flask, redirect, request, url_for,render_template,abort,flash
+from flask import Flask, redirect, request, url_for,render_template,abort,flash, jsonify
 from flask_login import (
     LoginManager,
     current_user,
@@ -167,42 +167,38 @@ def admindashboard():
         query = f"SELECT FileID, FileName, Status, AccessLevel FROM documents WHERE Status = 'BeforeML'"
         Cursor.execute(query)
         changeaccess = Cursor.fetchall()
-        print("got access level")
         for row in changeaccess:
             accessliste.append(docdetail(row[0], row[1], row[2], row[3]))
-            print("in for loop")
         Cursor.close()
         Connection_Database.close()
     except Exception as e:
         print (f"dashboard Error: {e}")
     return render_template("admin.html", accessliste = accessliste)
 
-@app.route('/updateadmin', methods=['GET', 'POST'])
+
+
+@app.route('/update_fileaccess', methods=['POST'])
 def update_fileaccess():
-    if request.method == 'POST':
-        try:
-            # Your existing code for database update...
-            selected_fileaccess = request.form['fileaccess']
+    try:
+        fileid = request.form['fileid']
+        print(fileid)
+        selected_accesslevel = request.form['fileaccess']
+        print(selected_accesslevel)
+        Connection_Database = mysql.connector.connect(host=IPAddr, user="root", database="ispj", password="")
+        Cursor = Connection_Database.cursor()
+        update_query = f"UPDATE documents SET AccessLevel = '{selected_accesslevel}' WHERE FileID = '{fileid}'"
+        Cursor.execute(update_query)
+        Connection_Database.commit()
+        Cursor.close()
+        Connection_Database.close()
+        # Your existing code to update the database based on fileid and selected_accesslevel
 
-            # Replace 'your_update_query' with the actual update query
-            
-
-            Connection_Database = mysql.connector.connect(host=IPAddr, user="root", database="ispj", password="")
-            Cursor = Connection_Database.cursor()
-            update_query = f"UPDATE documents SET AccessLevel = '{selected_fileaccess}' WHERE FileName = "
-            Cursor.execute(update_query)
-            Connection_Database.commit()
-            Cursor.close()
-            Connection_Database.close()
-
-            # success_message = f"Successfully updated status for filename: {selected_filename}"
-            return render_template('your_template.html')
-
-        except Exception as e:
-            error_message = f'Failed to update: {e}'
-            return render_template('your_template.html', error_message=error_message)
-
-    return render_template('your_template.html')
+        # Assuming you want to return some response data (e.g., JSON)
+        
+        return jsonify({"success": str("success")})
+    except Exception as e:
+        print(e)
+        return jsonify({"error": "failed"})
 
 @app.route('/files')
 @login_required
