@@ -164,7 +164,7 @@ def admindashboard():
         app.logger.info("admin access admin dashboard")
         Connection_Database = mysql.connector.connect(host=IPAddr, user="root", database="ispj", password="")
         Cursor = Connection_Database.cursor()
-        query = f"SELECT FileID, FileName, Status, AccessLevel FROM documents WHERE Status = 'AfterML'"
+        query = f"SELECT FileID, FileName, Status, AccessLevel FROM documents WHERE Status = 'BeforeML'"
         Cursor.execute(query)
         changeaccess = Cursor.fetchall()
         print("got access level")
@@ -176,6 +176,33 @@ def admindashboard():
     except Exception as e:
         print (f"dashboard Error: {e}")
     return render_template("admin.html", accessliste = accessliste)
+
+@app.route('/updateadmin', methods=['GET', 'POST'])
+def update_fileaccess():
+    if request.method == 'POST':
+        try:
+            # Your existing code for database update...
+            selected_fileaccess = request.form['fileaccess']
+
+            # Replace 'your_update_query' with the actual update query
+            
+
+            Connection_Database = mysql.connector.connect(host=IPAddr, user="root", database="ispj", password="")
+            Cursor = Connection_Database.cursor()
+            update_query = f"UPDATE documents SET AccessLevel = '{selected_fileaccess}' WHERE FileName = "
+            Cursor.execute(update_query)
+            Connection_Database.commit()
+            Cursor.close()
+            Connection_Database.close()
+
+            # success_message = f"Successfully updated status for filename: {selected_filename}"
+            return render_template('your_template.html')
+
+        except Exception as e:
+            error_message = f'Failed to update: {e}'
+            return render_template('your_template.html', error_message=error_message)
+
+    return render_template('your_template.html')
 
 @app.route('/files')
 @login_required
@@ -253,7 +280,7 @@ def upload():
         try:
             Connection_Database = mysql.connector.connect(host=IPAddr, user="root", database="ispj", password="")
             Cursor = Connection_Database.cursor()
-            query = f"INSERT INTO documents (FileID, FileName, Status, AccessLevel, Qubits, List) VALUES ('{uuid.uuid4()}','{uploaded_file.filename}','BeforeML',0, '{server_key}', '{server_table}')"
+            query = f"INSERT INTO documents (FileID, FileName, Status, AccessLevel, Qubits, List) VALUES ('{uuid.uuid4()}','{uploaded_file.filename}','BeforeML',1, '{server_key}', '{server_table}')"
             Cursor.execute(query)
             Connection_Database.commit()
             Cursor.close()
