@@ -78,24 +78,25 @@
             }
     
             function authenticate(imageData) {
-                fetch('/authenticate', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-                    body: `image=${encodeURIComponent(imageData)}`
-                })
-                .then(response => response.json())
-                .then(data => {
-                    if (data.success) {
-                        uploadResultMessage.textContent = `Hi ${data.user.firstName} ${data.user.lastName}, welcome!`;
-                    } else {
-                        uploadResultMessage.textContent = 'Authentication failed';
-                    }
-                })
-                .catch(error => {
-                    console.error('Error during authentication:', error);
-                    uploadResultMessage.textContent = 'Error during authentication process. Please try again.';
-                });
-            }
+            const filename = '{{ filename }}';  // This retrieves the filename from the Jinja template
+            fetch(`/authenticate?filename=${encodeURIComponent(filename)}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: `image=${encodeURIComponent(imageData)}`
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    uploadResultMessage.textContent = `Hi ${data.user.firstName} ${data.user.lastName}, welcome!`;
+                } else {
+                    uploadResultMessage.textContent = 'Authentication failed';
+                }
+            })
+            .catch(error => {
+                console.error('Error during authentication:', error);
+                uploadResultMessage.textContent = 'Error during authentication process. Please try again.';
+            });
+        }
         </script>
     </body>
 {% endblock %}
