@@ -28,7 +28,6 @@ import requests
 import classification
 from filedetailidk import *
 from userdetailidk import *
-from db import init_db_command
 from user import User, sql_query
 import logging
 from logging.handlers import RotatingFileHandler
@@ -133,8 +132,33 @@ def callback():
 @app.route('/dashboard', methods=['GET','POST'])
 @login_required
 def dashboard():
+    User_Role = sql_query(f"SELECT ROLE FROM user WHERE ID={current_user.id}")
     app.logger.info(f'{current_user.name} has arrived at dashboard')
-    return render_template("dashboard.html")
+    if User_Role[0][0] != 'Admin':
+        Access_Level = sql_query(f"SELECT Level FROM user WHERE Email = '{current_user.email}'")
+        Files = sql_query(f"SELECT ID, Name, Status, Access_Level FROM document WHERE Access_Level <= {Access_Level[0][0]}")
+        List_Files = [docdetail(row[0],row[1],row[2],row[3]) for row in Files]
+        return render_template("dashboard.html", fileliste = List_Files)
+    else:
+        Connection_Database = mysql.connector.connect(host=IPAddr, user="root", database="ispj", password="")
+        Cursor = Connection_Database.cursor()
+        query = f"SELECT ID, Name, Status, Access_Level FROM document WHERE Status <> 'Classified' "
+        Cursor.execute(query)
+        changeaccess = Cursor.fetchall()
+        accessliste = [docdetail(row[0], row[1], row[2], row[3]) for row in changeaccess]
+        Cursor.close()
+        Cursor = Connection_Database.cursor()
+        Connection_Database.close()
+
+        Connection_Database = mysql.connector.connect(host=IPAddr, user="root", database="ispj", password="")
+        Cursor = Connection_Database.cursor()
+        query_2 = "SELECT Email, ROLE, Level, ID FROM user WHERE ROLE = 'User'"
+        Cursor.execute(query_2)
+        result_set_2 = Cursor.fetchall()
+        useraccessliste = [docdetail(row[0], row[1], row[2], row[3]) for row in result_set_2]
+        Cursor.close()
+        Connection_Database.close()
+        return render_template("admin.html", accessliste = accessliste, useraccessliste = useraccessliste)
 
 @app.route('/info')
 @login_required
