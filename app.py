@@ -163,7 +163,7 @@ def admindashboard():
         app.logger.info("admin access admin dashboard")
         Connection_Database = mysql.connector.connect(host=IPAddr, user="root", database="ispj", password="")
         Cursor = Connection_Database.cursor()
-        query = f"SELECT FileID, FileName, Status, AccessLevel FROM documents WHERE Status <> 'Classified' "
+        query = f"SELECT ID, Name, Status, Access_Level FROM document WHERE Status <> 'Classified' "
         Cursor.execute(query)
         changeaccess = Cursor.fetchall()
         for row in changeaccess:
@@ -174,7 +174,7 @@ def admindashboard():
 
         Connection_Database = mysql.connector.connect(host=IPAddr, user="root", database="ispj", password="")
         Cursor = Connection_Database.cursor()
-        query_2 = "SELECT User, UserRole, UserLevel, id FROM users WHERE UserRole = 'User'"
+        query_2 = "SELECT Email, ROLE, Level, ID FROM user WHERE ROLE = 'User'"
         Cursor.execute(query_2)
         result_set_2 = Cursor.fetchall()
         for row in result_set_2:
@@ -196,7 +196,7 @@ def update_fileaccess():
         print(selected_accesslevel)
         Connection_Database = mysql.connector.connect(host=IPAddr, user="root", database="ispj", password="")
         Cursor = Connection_Database.cursor()
-        update_query = f"UPDATE documents SET AccessLevel = '{selected_accesslevel}', Status= 'Classified' WHERE FileID = '{fileid}'"
+        update_query = f"UPDATE document SET Access_Level = '{selected_accesslevel}', Status= 'Classified' WHERE ID = '{fileid}'"
         Cursor.execute(update_query)
         Connection_Database.commit()
         Cursor.close()
@@ -219,7 +219,7 @@ def update_useraccess():
         print(f"selected user level={selected_userlevel}")
         Connection_Database = mysql.connector.connect(host=IPAddr, user="root", database="ispj", password="")
         Cursor = Connection_Database.cursor()
-        update_query = f"UPDATE users SET UserLevel = '{selected_userlevel}' WHERE id = '{userid}'"
+        update_query = f"UPDATE user SET Level = '{selected_userlevel}' WHERE ID = '{userid}'"
         Cursor.execute(update_query)
         Connection_Database.commit()
         Cursor.close()
@@ -240,12 +240,12 @@ def files():
         try:
             Connection_Database = mysql.connector.connect(host=IPAddr, user="root", database="ispj", password="")
             Cursor = Connection_Database.cursor()
-            query = f"SELECT UserLevel FROM users WHERE User = '{current_user.email}'"
+            query = f"SELECT Level FROM user WHERE Email = '{current_user.email}'"
             Cursor.execute(query)
             UserLevel = Cursor.fetchone()
             UserLevel = UserLevel[0]
             print(UserLevel)
-            query = f"SELECT FileID, FileName, Status, AccessLevel FROM documents WHERE AccessLevel <= {UserLevel}"
+            query = f"SELECT ID, Name, Status, Access_Level FROM document WHERE Access_Level <= {UserLevel}"
             # query = f"SELECT FileID, FileName, Status, AccessLevel FROM documents WHERE AccessLevel <= 3"
             Cursor.execute(query)
             filedetailss = Cursor.fetchall()
@@ -279,7 +279,7 @@ def upload():
     if uploaded_file.filename != '':       
         Connection_Database = mysql.connector.connect(host=IPAddr, user="root", database="ispj", password="")
         Cursor = Connection_Database.cursor()
-        query = f"SELECT * FROM documents WHERE FileName = '{uploaded_file.filename}'"
+        query = f"SELECT * FROM document WHERE Name = '{uploaded_file.filename}'"
         Cursor.execute(query)
         result = Cursor.fetchone()
         if result:
@@ -306,9 +306,10 @@ def upload():
             """
             return render_template('files.html', popup=popup)
         try:
+            print({current_user.id})
             Connection_Database = mysql.connector.connect(host=IPAddr, user="root", database="ispj", password="")
             Cursor = Connection_Database.cursor()
-            query = f"INSERT INTO documents (FileID, FileName, Status, AccessLevel, Qubits, List) VALUES ('{uuid.uuid4()}','{uploaded_file.filename}','BeforeML',1, '{server_key}', '{server_table}')"
+            query = f"INSERT INTO document (ID, Name, Status, Access_Level,User_ID, QUBITS, LIST) VALUES ('{uuid.uuid4()}','{uploaded_file.filename}','BeforeML',1,'{current_user.id}', '{server_key}', '{server_table}')"
             Cursor.execute(query)
             Connection_Database.commit()
             Cursor.close()
