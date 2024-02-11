@@ -132,6 +132,8 @@ def callback():
 @app.route('/dashboard', methods=['GET','POST'])
 @login_required
 def dashboard():
+    accessliste = []
+    useraccessliste = []
     User_Role = sql_query(f"SELECT ROLE FROM user WHERE ID={current_user.id}")
     app.logger.info(f'{current_user.name} has arrived at dashboard')
     if User_Role[0][0] != 'Admin':
@@ -145,7 +147,8 @@ def dashboard():
         query = f"SELECT ID, Name, Status, Access_Level FROM document WHERE Status <> 'Classified' "
         Cursor.execute(query)
         changeaccess = Cursor.fetchall()
-        accessliste = [docdetail(row[0], row[1], row[2], row[3]) for row in changeaccess]
+        for row in changeaccess:
+            accessliste.append(docdetail(row[0], row[1], row[2], row[3]))
         Cursor.close()
         Cursor = Connection_Database.cursor()
         Connection_Database.close()
@@ -155,7 +158,8 @@ def dashboard():
         query_2 = "SELECT Email, ROLE, Level, ID FROM user WHERE ROLE = 'User'"
         Cursor.execute(query_2)
         result_set_2 = Cursor.fetchall()
-        useraccessliste = [docdetail(row[0], row[1], row[2], row[3]) for row in result_set_2]
+        for row in result_set_2:
+            useraccessliste.append(userdetail(row[0], row[1], row[2], row[3]))
         Cursor.close()
         Connection_Database.close()
         return render_template("admin.html", accessliste = accessliste, useraccessliste = useraccessliste)
@@ -178,36 +182,6 @@ def logout():
 def aboutus():
     app.logger.info("Guest has arrived about us")
     return render_template("aboutus.html")
-
-@app.route('/admindashboard')
-def admindashboard():
-    accessliste = []
-    useraccessliste = []
-    try:
-        app.logger.info("admin access admin dashboard")
-        Connection_Database = mysql.connector.connect(host=IPAddr, user="root", database="ispj", password="")
-        Cursor = Connection_Database.cursor()
-        query = f"SELECT ID, Name, Status, Access_Level FROM document WHERE Status <> 'Classified' "
-        Cursor.execute(query)
-        changeaccess = Cursor.fetchall()
-        for row in changeaccess:
-            accessliste.append(docdetail(row[0], row[1], row[2], row[3]))
-        Cursor.close()
-        Cursor = Connection_Database.cursor()
-        Connection_Database.close()
-
-        Connection_Database = mysql.connector.connect(host=IPAddr, user="root", database="ispj", password="")
-        Cursor = Connection_Database.cursor()
-        query_2 = "SELECT Email, ROLE, Level, ID FROM user WHERE ROLE = 'User'"
-        Cursor.execute(query_2)
-        result_set_2 = Cursor.fetchall()
-        for row in result_set_2:
-            useraccessliste.append(userdetail(row[0], row[1], row[2], row[3]))
-        Cursor.close()
-        Connection_Database.close()
-    except Exception as e:
-        print (f"dashboard Error: {e}")
-    return render_template("admin.html", accessliste = accessliste, useraccessliste = useraccessliste)
 
 
 
