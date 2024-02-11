@@ -29,7 +29,7 @@ import classification
 from filedetailidk import *
 from userdetailidk import *
 from db import init_db_command
-from user import User
+from user import User, sql_query
 import logging
 from logging.handlers import RotatingFileHandler
 import mysql.connector
@@ -60,12 +60,9 @@ GOOGLE_DISCOVERY_URL = (
 login_manager = LoginManager()
 login_manager.init_app(app)
 app.config['UPLOAD_FOLDER'] = 'static/files/'
-try:
-    init_db_command()
-except sqlite3.OperationalError:
-    app.logger.error("Error:sqlite3.OperationalError")
 
 client = WebApplicationClient(GOOGLE_CLIENT_ID)
+
 
 @login_manager.user_loader
 def load_user(user_id):
@@ -126,10 +123,10 @@ def callback():
     else:
         return "User email not available or not verified by Google.", 400
     user = User(
-    id_=unique_id, name=users_name, email=users_email, profile_pic=picture
+     id = unique_id, name=users_name, email=users_email, profile_pic=picture
 )
-    if not User.get(unique_id):
-        User.create(unique_id, users_name, users_email, picture)
+    if User.get(unique_id) is None:
+        User.create(unique_id,users_name,picture, users_email)
     login_user(user)
     return redirect(url_for("dashboard"))
 
@@ -241,7 +238,6 @@ def update_useraccess():
 def files():
         fileliste = []
         try:
-            print(current_user.email)
             Connection_Database = mysql.connector.connect(host=IPAddr, user="root", database="ispj", password="")
             Cursor = Connection_Database.cursor()
             query = f"SELECT UserLevel FROM users WHERE User = '{current_user.email}'"
