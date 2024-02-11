@@ -28,7 +28,6 @@ import requests
 import classification
 from filedetailidk import *
 from userdetailidk import *
-from db import init_db_command
 from user import User, sql_query
 import logging
 from logging.handlers import RotatingFileHandler
@@ -133,34 +132,16 @@ def callback():
 @app.route('/dashboard', methods=['GET','POST'])
 @login_required
 def dashboard():
-    app.logger.info(f'{current_user.name} has arrived at dashboard')
-    return render_template("dashboard.html")
-
-@app.route('/info')
-@login_required
-def info():
-    app.logger.info(f'{current_user.name} is viewing account info')
-    return render_template("info.html", info={"Name":current_user.name, "Email":current_user.email}, pic=current_user.profile_pic)
-
-
-@app.route("/logout")
-@login_required
-def logout():
-    app.logger.info(f'{current_user.name} has logged out')
-    logout_user()
-    return redirect(url_for("home"))
-
-@app.route('/about')
-def aboutus():
-    app.logger.info("Guest has arrived about us")
-    return render_template("aboutus.html")
-
-@app.route('/admindashboard')
-def admindashboard():
     accessliste = []
     useraccessliste = []
-    try:
-        app.logger.info("admin access admin dashboard")
+    User_Role = sql_query(f"SELECT ROLE FROM user WHERE ID={current_user.id}")
+    app.logger.info(f'{current_user.name} has arrived at dashboard')
+    if User_Role[0][0] != 'Admin':
+        Access_Level = sql_query(f"SELECT Level FROM user WHERE Email = '{current_user.email}'")
+        Files = sql_query(f"SELECT ID, Name, Status, Access_Level FROM document WHERE Access_Level <= {Access_Level[0][0]}")
+        List_Files = [docdetail(row[0],row[1],row[2],row[3]) for row in Files]
+        return render_template("dashboard.html", fileliste = List_Files)
+    else:
         Connection_Database = mysql.connector.connect(host=IPAddr, user="root", database="ispj", password="")
         Cursor = Connection_Database.cursor()
         query = f"SELECT ID, Name, Status, Access_Level FROM document WHERE Status <> 'Classified' "
@@ -181,9 +162,26 @@ def admindashboard():
             useraccessliste.append(userdetail(row[0], row[1], row[2], row[3]))
         Cursor.close()
         Connection_Database.close()
-    except Exception as e:
-        print (f"dashboard Error: {e}")
-    return render_template("admin.html", accessliste = accessliste, useraccessliste = useraccessliste)
+        return render_template("admin.html", accessliste = accessliste, useraccessliste = useraccessliste)
+
+@app.route('/info')
+@login_required
+def info():
+    app.logger.info(f'{current_user.name} is viewing account info')
+    return render_template("info.html", info={"Name":current_user.name, "Email":current_user.email}, pic=current_user.profile_pic)
+
+
+@app.route("/logout")
+@login_required
+def logout():
+    app.logger.info(f'{current_user.name} has logged out')
+    logout_user()
+    return redirect(url_for("home"))
+
+@app.route('/about')
+def aboutus():
+    app.logger.info("Guest has arrived about us")
+    return render_template("aboutus.html")
 
 
 

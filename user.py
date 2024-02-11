@@ -9,7 +9,7 @@ def sql_query(query):
         Cursor = Connection_Database.cursor()
         Cursor.execute(query)
         if 'SELECT' in query:
-            Data = Cursor.fetchmany()
+            Data = Cursor.fetchall()
         else:
             Data = None
         Connection_Database.commit()
