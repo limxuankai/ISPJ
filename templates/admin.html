@@ -19,7 +19,9 @@
     
     <div style="display: flex">
         <div style="padding-right: 20px;">{{i.get_fileid()}} <br></div>
-        <div style="padding-right: 20px;">{{i.get_filename()}} </div>
+        <a href="{{ url_for('presigned', filename=i.get_filename()) }}">
+            <div style="margin-right: 20px;">{{i.get_filename()}}</div>
+        </a>
         <form id="updateForm_{{i.get_fileid()}}" onsubmit="updateFileAccess(event, '{{i.get_fileid()}}')">
             <label for="fileaccess">Select Access Level:</label>
             <select name="fileaccess" id="fileaccess">

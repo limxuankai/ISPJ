@@ -199,7 +199,7 @@ def update_fileaccess():
         print(selected_accesslevel)
         Connection_Database = mysql.connector.connect(host=IPAddr, user="root", database="ispj", password="")
         Cursor = Connection_Database.cursor()
-        update_query = f"UPDATE documents SET AccessLevel = '{selected_accesslevel}' WHERE FileID = '{fileid}'"
+        update_query = f"UPDATE documents SET AccessLevel = '{selected_accesslevel}', Status= 'Classified' WHERE FileID = '{fileid}'"
         Cursor.execute(update_query)
         Connection_Database.commit()
         Cursor.close()
