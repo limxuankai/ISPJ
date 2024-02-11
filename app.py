@@ -259,7 +259,6 @@ def files():
             print (f"Error: {e}")
         return render_template("files.html", fileliste=fileliste)
 
-
 @app.route('/upload', methods=['POST'])
 @login_required
 def upload():
@@ -276,69 +275,38 @@ def upload():
     encrypted_file = io.BytesIO(encryted_file)
     server_table = (','.join(server_table))
 
-    if uploaded_file.filename != '':       
+    result = 'success'  # Default to success
+
+    if uploaded_file.filename != '':
         Connection_Database = mysql.connector.connect(host=IPAddr, user="root", database="ispj", password="")
         Cursor = Connection_Database.cursor()
         query = f"SELECT * FROM document WHERE Name = '{uploaded_file.filename}'"
         Cursor.execute(query)
-        result = Cursor.fetchone()
-        if result:
-            popup = """
-            <script>
-                alert('duplicate name detected');
-            </script>
-            """
-            return render_template('files.html', popup=popup)
+        result = 'duplicate' if Cursor.fetchone() else 'success'
         Cursor.close()
         Connection_Database.close()
-        
-        
-        try:
-            print('still testing')
-            s3 = boto3.client('s3', aws_access_key_id=aws_access_key_id, aws_secret_access_key=aws_secret_access_key, region_name=region_name)
-            s3.upload_fileobj(encrypted_file, bucket_name, uploaded_file.filename)
-        except Exception as e:
-            print(f'Failed to upload: {e}')
-            popup = """
-            <script>
-                alert('Upload failed!');
-            </script>
-            """
-            return render_template('files.html', popup=popup)
-        try:
-            print({current_user.id})
-            Connection_Database = mysql.connector.connect(host=IPAddr, user="root", database="ispj", password="")
-            Cursor = Connection_Database.cursor()
-            query = f"INSERT INTO document (ID, Name, Status, Access_Level,User_ID, QUBITS, LIST) VALUES ('{uuid.uuid4()}','{uploaded_file.filename}','BeforeML',1,'{current_user.id}', '{server_key}', '{server_table}')"
-            Cursor.execute(query)
-            Connection_Database.commit()
-            Cursor.close()
-            Connection_Database.close()
-            print("successfully updated")
-            popup = """
-            <script>
-                alert('Upload successful!');
-            </script>
-            """
-            return render_template('files.html', popup=popup)
-        except Exception as e:
-            print(f'Failed to update db: {e}')
-            popup = """
-            <script>
-                alert('update failed');
-            </script>
-            """
-            return render_template('files.html', popup=popup)
-        
 
+        if result == 'success':
+            try:
+                print('still testing')
+                s3 = boto3.client('s3', aws_access_key_id=aws_access_key_id, aws_secret_access_key=aws_secret_access_key, region_name=region_name)
+                s3.upload_fileobj(encrypted_file, bucket_name, uploaded_file.filename)
 
-        # download_presigned_url = generate_presigned_url(s3, bucket_name, uploaded_file.filename, expiration_time=180, content_disposition='attachment; filename="' + uploaded_file.filename + '"')
-        # preview_presigned_url = generate_presigned_url(s3, bucket_name, uploaded_file.filename, expiration_time=180, content_disposition='inline')
+                print({current_user.id})
+                Connection_Database = mysql.connector.connect(host=IPAddr, user="root", database="ispj", password="")
+                Cursor = Connection_Database.cursor()
+                query = f"INSERT INTO document (ID, Name, Status, Access_Level,User_ID, QUBITS, LIST) VALUES ('{uuid.uuid4()}','{uploaded_file.filename}','BeforeML',1,'{current_user.id}', '{server_key}', '{server_table}')"
+                Cursor.execute(query)
+                Connection_Database.commit()
+                Cursor.close()
+                Connection_Database.close()
+                print("successfully updated")
+            except Exception as e:
+                print(f'Failed to upload or update db: {e}')
+                result = 'fail'
 
-        
+    return jsonify(result)
 
-        # return f"File successfully uploaded.<br>Download URL (valid for 3 minutes): {download_presigned_url}<br>Preview URL (valid for 3 minutes): {preview_presigned_url}"
-    return "No file selected."
 
 @app.route('/presigned', methods=['GET','POST'])
 def presigned():
