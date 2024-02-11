@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <link rel="stylesheet" href="https://www.w3schools.com/w3css/4/w3.css">
+    <link rel="stylesheet" href="/static/styles/style.css">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %} {% endblock %}</title>
+</head>
+{% block navbar %}
+{% include 'includes/acc_nav.html' %} 
+{% endblock %}
+{% block content %}
+    <body>
+        <div class="webcam-container">
+            <video id="webcam" autoplay></video>
+            <div class="button-container">
+                <button id="toggleWebcam">Turn On Webcam</button>
+                <button id="captureImage">Capture Image</button>
+            </div>
+        </div>
+        <div id="uploadResultMessage" class="message">Please capture an image to authenticate.</div>
+    
+        <script>
+            const webcam = document.getElementById('webcam');
+            const toggleWebcamButton = document.getElementById('toggleWebcam');
+            const captureImageButton = document.getElementById('captureImage');
+            const uploadResultMessage = document.getElementById('uploadResultMessage');
+    
+            let isWebcamOn = false;
+    
+            // Toggle webcam
+            toggleWebcamButton.addEventListener('click', () => {
+                if (!isWebcamOn) {
+                    startWebcam();
+                    toggleWebcamButton.textContent = 'Turn Off Webcam';
+                    isWebcamOn = true;
+                } else {
+                    stopWebcam();
+                    toggleWebcamButton.textContent = 'Turn On Webcam';
+                    isWebcamOn = false;
+                }
+            });
+    
+            // Capture image
+            captureImageButton.addEventListener('click', () => {
+                if (isWebcamOn) {
+                    captureImage();
+                }
+            });
+    
+            function startWebcam() {
+                navigator.mediaDevices.getUserMedia({ video: true })
+                    .then(stream => {
+                        webcam.srcObject = stream;
+                    })
+                    .catch(error => {
+                        console.error('Error accessing webcam:', error);
+                    });
+            }
+    
+            function stopWebcam() {
+                const stream = webcam.srcObject;
+                if (stream) {
+                    const tracks = stream.getTracks();
+                    tracks.forEach(track => track.stop());
+                    webcam.srcObject = null;
+                }
+            }
+    
+            function captureImage() {
+                const canvas = document.createElement('canvas');
+                canvas.width = webcam.videoWidth;
+                canvas.height = webcam.videoHeight;
+                canvas.getContext('2d').drawImage(webcam, 0, 0, canvas.width, canvas.height);
+                const imageData = canvas.toDataURL('image/jpeg');
+                authenticate(imageData);
+            }
+    
+            function authenticate(imageData) {
+                fetch('/authenticate', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                    body: `image=${encodeURIComponent(imageData)}`
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        uploadResultMessage.textContent = `Hi ${data.user.firstName} ${data.user.lastName}, welcome!`;
+                    } else {
+                        uploadResultMessage.textContent = 'Authentication failed';
+                    }
+                })
+                .catch(error => {
+                    console.error('Error during authentication:', error);
+                    uploadResultMessage.textContent = 'Error during authentication process. Please try again.';
+                });
+            }
+        </script>
+    </body>
+{% endblock %}

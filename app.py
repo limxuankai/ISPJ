@@ -16,6 +16,7 @@ from sklearn.naive_bayes import MultinomialNB
 from sklearn.metrics import accuracy_score
 from datetime import datetime, timedelta
 from flask import Flask, redirect, request, url_for,render_template,abort,flash, jsonify
+from flask_cors import CORS
 from flask_login import (
     LoginManager,
     current_user,
@@ -25,6 +26,7 @@ from flask_login import (
 )
 from oauthlib.oauth2 import WebApplicationClient
 import requests
+import base64
 import classification
 from filedetailidk import *
 from userdetailidk import *
@@ -37,6 +39,10 @@ from encryption import encrypt, decrypt
 import io
 
 app = Flask(__name__)
+CORS(app)  # Allow cross-origin requests
+
+UPLOAD_FACE_FOLDER = 'faceuploads'
+
 IPAddr = "104.196.231.172"
 
 app.logger.setLevel(logging.INFO)
@@ -183,7 +189,94 @@ def aboutus():
     app.logger.info("Guest has arrived about us")
     return render_template("aboutus.html")
 
+@app.route('/faceauth')
+def faceauth():
+    app.logger.info("user doing face authentication")
+    return render_template("faceauth.html")
 
+def save_image(data_uri):
+    _, encoded = data_uri.split(",", 1)
+    img_data = base64.b64decode(encoded)
+    image_name = str(uuid.uuid4()) + ".jpg"
+    image_path = os.path.join(UPLOAD_FACE_FOLDER, image_name)
+    with open(image_path, "wb") as f:
+        f.write(img_data)
+    return image_name
+
+@app.route("/uploadface", methods=["POST"])
+def upload_image():
+    if "image" not in request.form:
+        return jsonify({"error": "No image data found"}), 400
+    image_name = save_image(request.form["image"])
+    return jsonify({"success": True, "image_name": image_name})
+
+@app.route("/authenticate", methods=["POST"])
+def authenticate():
+    if "image" not in request.form:
+        return jsonify({"error": "No image data found"}), 400
+    image_name = save_image(request.form["image"])
+    try:
+        response = requests.put(
+            "https://rd376l6qic.execute-api.ap-southeast-2.amazonaws.com/dev/ispj-is-extremely-fun-visitor/{}.jpeg".format(image_name),
+            headers={"Content-Type": "image/jpeg"},
+            data=base64.b64decode(request.form["image"].split(",")[1]),
+        )
+        if response.status_code == 200:
+            auth_response = requests.get(
+                "https://rd376l6qic.execute-api.ap-southeast-2.amazonaws.com/dev/employee",
+                params={"objectKey": "{}.jpeg".format(image_name)}
+            )
+            auth_data = auth_response.json()
+            if auth_data.get("Message") == "Success":
+                return jsonify({"success": True, "user": auth_data})
+            else:
+                return jsonify({"success": False, "error": "Authentication failed"}), 401
+        else:
+            return jsonify({"success": False, "error": "Error during image upload"}), 500
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 500
+    
+@app.route('/presigned', methods=['GET','POST'])
+def presigned():
+    # AWS credentials and S3 bucket information
+    aws_access_key_id = 'AKIA2LOZ4RPA6DWSOH3Q'
+    aws_secret_access_key = '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'
+    region_name = 'ap-southeast-2'
+    bucket_name = 'documents-for-ispj'
+
+    filename = request.args.get('filename')
+    print(filename)
+
+    # Connection_Database = mysql.connector.connect(host=IPAddr, user="root", database="ispj", password="")
+    # Cursor = Connection_Database.cursor()
+    # query = f"SELECT Access_Level FROM document WHERE Name = '{filename}' "
+    # Cursor.execute(query)
+    # FileLevel = Cursor.fetchone()
+
+    # # Close the database connection
+    # Cursor.close()
+    # Connection_Database.close()
+
+    # # Check if the Access_Level is 3
+    # if FileLevel and FileLevel[0] == 3:
+    #     # Redirect to another page
+    #     return redirect('/faceauth')
+    #     # Check the response from the redirected page
+        
+
+    s3 = boto3.client('s3', aws_access_key_id=aws_access_key_id, aws_secret_access_key=aws_secret_access_key, region_name=region_name)
+    preview_presigned_url = generate_presigned_url(s3, bucket_name, filename, expiration_time=180, content_disposition='inline')
+    return redirect(preview_presigned_url, code=302)
+
+def generate_presigned_url(s3_client, bucket, key, expiration_time, content_disposition='inline'):
+    #Generate a pre-signed URL for the S3 object with a specific expiration time
+    url = s3_client.generate_presigned_url(
+        'get_object',
+        Params={'Bucket': bucket, 'Key': key, 'ResponseContentDisposition': content_disposition},
+        ExpiresIn=expiration_time,
+
+    )
+    return url
 
 @app.route('/update_fileaccess', methods=['POST'])
 def update_fileaccess():
@@ -306,30 +399,7 @@ def upload():
     return jsonify(result)
 
 
-@app.route('/presigned', methods=['GET','POST'])
-def presigned():
-    # AWS credentials and S3 bucket information
-    aws_access_key_id = 'AKIA2LOZ4RPA6DWSOH3Q'
-    aws_secret_access_key = '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'
-    region_name = 'ap-southeast-2'
-    bucket_name = 'documents-for-ispj'
 
-    filename = request.args.get('filename')
-    print(filename)
-
-    s3 = boto3.client('s3', aws_access_key_id=aws_access_key_id, aws_secret_access_key=aws_secret_access_key, region_name=region_name)
-    preview_presigned_url = generate_presigned_url(s3, bucket_name, filename, expiration_time=180, content_disposition='inline')
-    return redirect(preview_presigned_url, code=302)
-
-def generate_presigned_url(s3_client, bucket, key, expiration_time, content_disposition='inline'):
-    #Generate a pre-signed URL for the S3 object with a specific expiration time
-    url = s3_client.generate_presigned_url(
-        'get_object',
-        Params={'Bucket': bucket, 'Key': key, 'ResponseContentDisposition': content_disposition},
-        ExpiresIn=expiration_time,
-
-    )
-    return url
 
 # @app.route('/upload', methods=['POST'])
 # def upload():
