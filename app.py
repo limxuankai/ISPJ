@@ -7,6 +7,7 @@ import docx2txt
 import pandas as pd
 import nltk
 import uuid
+import boto3
 from nltk.corpus import stopwords
 from nltk.tokenize import word_tokenize
 from sklearn.feature_extraction.text import CountVectorizer
@@ -14,7 +15,7 @@ from sklearn.model_selection import train_test_split
 from sklearn.naive_bayes import MultinomialNB
 from sklearn.metrics import accuracy_score
 from datetime import datetime, timedelta
-from flask import Flask, redirect, request, url_for,render_template,abort,flash
+from flask import Flask, redirect, request, url_for,render_template,abort,flash, jsonify
 from flask_login import (
     LoginManager,
     current_user,
@@ -25,6 +26,8 @@ from flask_login import (
 from oauthlib.oauth2 import WebApplicationClient
 import requests
 import classification
+from filedetailidk import *
+from userdetailidk import *
 from db import init_db_command
 from user import User, sql_query
 import logging
@@ -152,20 +155,109 @@ def aboutus():
     app.logger.info("Guest has arrived about us")
     return render_template("aboutus.html")
 
+@app.route('/admindashboard')
+def admindashboard():
+    accessliste = []
+    useraccessliste = []
+    try:
+        app.logger.info("admin access admin dashboard")
+        Connection_Database = mysql.connector.connect(host=IPAddr, user="root", database="ispj", password="")
+        Cursor = Connection_Database.cursor()
+        query = f"SELECT FileID, FileName, Status, AccessLevel FROM documents WHERE Status = 'BeforeML'"
+        Cursor.execute(query)
+        changeaccess = Cursor.fetchall()
+        for row in changeaccess:
+            accessliste.append(docdetail(row[0], row[1], row[2], row[3]))
+        Cursor.close()
+        Cursor = Connection_Database.cursor()
+        Connection_Database.close()
+
+        Connection_Database = mysql.connector.connect(host=IPAddr, user="root", database="ispj", password="")
+        Cursor = Connection_Database.cursor()
+        query_2 = "SELECT User, UserRole, UserLevel, id FROM users WHERE UserRole = 'User'"
+        Cursor.execute(query_2)
+        result_set_2 = Cursor.fetchall()
+        for row in result_set_2:
+            useraccessliste.append(userdetail(row[0], row[1], row[2], row[3]))
+        Cursor.close()
+        Connection_Database.close()
+    except Exception as e:
+        print (f"dashboard Error: {e}")
+    return render_template("admin.html", accessliste = accessliste, useraccessliste = useraccessliste)
+
+
+
+@app.route('/update_fileaccess', methods=['POST'])
+def update_fileaccess():
+    try:
+        fileid = request.form['fileid']
+        print(fileid)
+        selected_accesslevel = request.form['fileaccess']
+        print(selected_accesslevel)
+        Connection_Database = mysql.connector.connect(host=IPAddr, user="root", database="ispj", password="")
+        Cursor = Connection_Database.cursor()
+        update_query = f"UPDATE documents SET AccessLevel = '{selected_accesslevel}' WHERE FileID = '{fileid}'"
+        Cursor.execute(update_query)
+        Connection_Database.commit()
+        Cursor.close()
+        Connection_Database.close()
+        # Your existing code to update the database based on fileid and selected_accesslevel
+
+        # Assuming you want to return some response data (e.g., JSON)
+        
+        return jsonify({"success": str("success")})
+    except Exception as e:
+        print(e)
+        return jsonify({"error": "failed"})
+    
+@app.route('/update_useraccess', methods=['POST'])
+def update_useraccess():
+    try:
+        userid = request.form['userid']
+        print(f"userid={userid}")
+        selected_userlevel = request.form['useraccess']
+        print(f"selected user level={selected_userlevel}")
+        Connection_Database = mysql.connector.connect(host=IPAddr, user="root", database="ispj", password="")
+        Cursor = Connection_Database.cursor()
+        update_query = f"UPDATE users SET UserLevel = '{selected_userlevel}' WHERE id = '{userid}'"
+        Cursor.execute(update_query)
+        Connection_Database.commit()
+        Cursor.close()
+        Connection_Database.close()
+        # Your existing code to update the database based on fileid and selected_accesslevel
+
+        # Assuming you want to return some response data (e.g., JSON)
+        
+        return jsonify({"success": str("success")})
+    except Exception as e:
+        print(e)
+        return jsonify({"error": "failed"})
 
 @app.route('/files')
 @login_required
 def files():
+        fileliste = []
         try:
+            Connection_Database = mysql.connector.connect(host=IPAddr, user="root", database="ispj", password="")
+            Cursor = Connection_Database.cursor()
             query = f"SELECT UserLevel FROM users WHERE User = '{current_user.email}'"
-            UserLevel = sql_query(query)
+            Cursor.execute(query)
+            UserLevel = Cursor.fetchone()
+            UserLevel = UserLevel[0]
+            print(UserLevel)
             query = f"SELECT FileID, FileName, Status, AccessLevel FROM documents WHERE AccessLevel <= {UserLevel}"
-            filedetails = sql_query(query)
-            for filedetail in filedetails:
-                print(filedetail[0],filedetail[1],filedetail[2])
+            # query = f"SELECT FileID, FileName, Status, AccessLevel FROM documents WHERE AccessLevel <= 3"
+            Cursor.execute(query)
+            filedetailss = Cursor.fetchall()
+            print("got filedetails")
+            for row in filedetailss:
+                fileliste.append(docdetail(row[0], row[1], row[2], row[3]))
+                print("in for loop")
+            Cursor.close()
+            Connection_Database.close()
         except Exception as e:
             print (f"Error: {e}")
-        return render_template("files.html")
+        return render_template("files.html", fileliste=fileliste)
 
 
 @app.route('/upload', methods=['POST'])
@@ -183,33 +275,84 @@ def upload():
     encryted_file = encrypt(encryted_file, KEY)
     encrypted_file = io.BytesIO(encryted_file)
     server_table = (','.join(server_table))
-   
-    if uploaded_file.filename != '':
+
+    if uploaded_file.filename != '':       
+        Connection_Database = mysql.connector.connect(host=IPAddr, user="root", database="ispj", password="")
+        Cursor = Connection_Database.cursor()
+        query = f"SELECT * FROM documents WHERE FileName = '{uploaded_file.filename}'"
+        Cursor.execute(query)
+        result = Cursor.fetchone()
+        if result:
+            popup = """
+            <script>
+                alert('duplicate name detected');
+            </script>
+            """
+            return render_template('files.html', popup=popup)
+        Cursor.close()
+        Connection_Database.close()
+        
+        
         try:
             print('still testing')
             s3 = boto3.client('s3', aws_access_key_id=aws_access_key_id, aws_secret_access_key=aws_secret_access_key, region_name=region_name)
             s3.upload_fileobj(encrypted_file, bucket_name, uploaded_file.filename)
         except Exception as e:
             print(f'Failed to upload: {e}')
+            popup = """
+            <script>
+                alert('Upload failed!');
+            </script>
+            """
+            return render_template('files.html', popup=popup)
         try:
             Connection_Database = mysql.connector.connect(host=IPAddr, user="root", database="ispj", password="")
             Cursor = Connection_Database.cursor()
-            query = f"INSERT INTO documents VALUES ('{uuid.uuid4()}','uploaded_file.filename','BeforeML',0, '{server_key}', '{server_table}')"
+            query = f"INSERT INTO documents (FileID, FileName, Status, AccessLevel, Qubits, List) VALUES ('{uuid.uuid4()}','{uploaded_file.filename}','BeforeML',1, '{server_key}', '{server_table}')"
             Cursor.execute(query)
             Connection_Database.commit()
             Cursor.close()
             Connection_Database.close()
+            print("successfully updated")
+            popup = """
+            <script>
+                alert('Upload successful!');
+            </script>
+            """
+            return render_template('files.html', popup=popup)
         except Exception as e:
-            print(f'Failed to update: {e}')
-        download_presigned_url = generate_presigned_url(s3, bucket_name, uploaded_file.filename, expiration_time=180, content_disposition='attachment; filename="' + uploaded_file.filename + '"')
-        preview_presigned_url = generate_presigned_url(s3, bucket_name, uploaded_file.filename, expiration_time=180, content_disposition='inline')
+            print(f'Failed to update db: {e}')
+            popup = """
+            <script>
+                alert('update failed');
+            </script>
+            """
+            return render_template('files.html', popup=popup)
+        
 
-        print(f"downloading: {download_presigned_url}")
-        print(f"previewing: {preview_presigned_url}")
 
-        return f"File successfully uploaded.<br>Download URL (valid for 3 minutes): {download_presigned_url}<br>Preview URL (valid for 3 minutes): {preview_presigned_url}"
+        # download_presigned_url = generate_presigned_url(s3, bucket_name, uploaded_file.filename, expiration_time=180, content_disposition='attachment; filename="' + uploaded_file.filename + '"')
+        # preview_presigned_url = generate_presigned_url(s3, bucket_name, uploaded_file.filename, expiration_time=180, content_disposition='inline')
 
+        
+
+        # return f"File successfully uploaded.<br>Download URL (valid for 3 minutes): {download_presigned_url}<br>Preview URL (valid for 3 minutes): {preview_presigned_url}"
     return "No file selected."
+
+@app.route('/presigned', methods=['GET','POST'])
+def presigned():
+    # AWS credentials and S3 bucket information
+    aws_access_key_id = 'AKIA2LOZ4RPA6DWSOH3Q'
+    aws_secret_access_key = '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'
+    region_name = 'ap-southeast-2'
+    bucket_name = 'documents-for-ispj'
+
+    filename = request.args.get('filename')
+    print(filename)
+
+    s3 = boto3.client('s3', aws_access_key_id=aws_access_key_id, aws_secret_access_key=aws_secret_access_key, region_name=region_name)
+    preview_presigned_url = generate_presigned_url(s3, bucket_name, filename, expiration_time=180, content_disposition='inline')
+    return redirect(preview_presigned_url, code=302)
 
 def generate_presigned_url(s3_client, bucket, key, expiration_time, content_disposition='inline'):
     #Generate a pre-signed URL for the S3 object with a specific expiration time
