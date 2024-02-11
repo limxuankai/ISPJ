@@ -166,7 +166,7 @@ def admindashboard():
         app.logger.info("admin access admin dashboard")
         Connection_Database = mysql.connector.connect(host=IPAddr, user="root", database="ispj", password="")
         Cursor = Connection_Database.cursor()
-        query = f"SELECT FileID, FileName, Status, AccessLevel FROM documents WHERE Status = 'BeforeML'"
+        query = f"SELECT FileID, FileName, Status, AccessLevel FROM documents WHERE Status <> 'Classified' "
         Cursor.execute(query)
         changeaccess = Cursor.fetchall()
         for row in changeaccess:

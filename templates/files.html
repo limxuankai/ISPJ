@@ -10,8 +10,9 @@
 {% block navbar %}
 {% include 'includes/acc_nav.html' %} 
 {% endblock %}
+{% block content %}
 <body>
-    {% block content %}
+    
     {{ popup | safe }}
     <form action="/upload" method="post" enctype="multipart/form-data" style="margin-top: 70px;">
         <label for="file">Choose a file:</label>
@@ -20,8 +21,44 @@
         <button type="submit">Upload</button>
     </form>
 
+    <table>
+        <tr>
+            <th>File ID</th>
+            <th>File Name</th>
+            <th>File Access Level</th>
+        </tr>
     
-    <div style="display: flex; flex-direction: column;">
+        {% for i in fileliste %}
+            {% if i.get_accesslevel() == 3 and i.get_status() == "Classified" %}
+                <tr>
+                    <td>{{i.get_fileid()}}</td>
+                    <td><a href="{{ url_for('presigned', filename=i.get_filename()) }}">{{i.get_filename()}}</a></td>
+                    <td>{{i.get_accesslevel()}}</td>
+                </tr>
+            {% endif %}
+        {% endfor %}
+    
+        {% for i in fileliste %}
+            {% if i.get_accesslevel() == 2 and i.get_status() == 'Classified' %}
+                <tr>
+                    <td>{{i.get_fileid()}}</td>
+                    <td><a href="{{ url_for('presigned', filename=i.get_filename()) }}">{{i.get_filename()}}</a></td>
+                    <td>{{i.get_accesslevel()}}</td>
+                </tr>
+            {% endif %}
+        {% endfor %}
+    
+        {% for i in fileliste %} 
+            {% if i.get_accesslevel() == 1 and i.get_status() == "Classified" %}
+                <tr>
+                    <td>{{i.get_fileid()}}</td>
+                    <td><a href="{{ url_for('presigned', filename=i.get_filename()) }}">{{i.get_filename()}}</a></td>
+                    <td>{{i.get_accesslevel()}}</td>
+                </tr>
+            {% endif %}
+        {% endfor %}
+    </table>
+    <!-- <div style="display: flex; flex-direction: column;">
 
         {% for i in fileliste %} 
             {% if i.get_accesslevel() == 3 and i.get_status() == "Classified"%}
@@ -58,7 +95,30 @@
                 </div>
             {% endif %}
         {% endfor %}
-    </div>
-    {% endblock %}
-</body>
+    </div> -->
+    <style>
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 20px;
+            margin-top: 20px;
+        }
+    
+        th, td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: left;
+        }
+    
+        th {
+            background-color: #f2f2f2;
+        }
+    
+        a {
+            text-decoration: none;
+            color: #333;
+        }
 
+    </style>
+</body>
+ {% endblock %}
