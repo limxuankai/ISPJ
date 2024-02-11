@@ -26,7 +26,7 @@ from oauthlib.oauth2 import WebApplicationClient
 import requests
 import classification
 from db import init_db_command
-from user import User
+from user import User, sql_query
 import logging
 from logging.handlers import RotatingFileHandler
 import mysql.connector
@@ -57,12 +57,9 @@ GOOGLE_DISCOVERY_URL = (
 login_manager = LoginManager()
 login_manager.init_app(app)
 app.config['UPLOAD_FOLDER'] = 'static/files/'
-try:
-    init_db_command()
-except sqlite3.OperationalError:
-    app.logger.error("Error:sqlite3.OperationalError")
 
 client = WebApplicationClient(GOOGLE_CLIENT_ID)
+
 
 @login_manager.user_loader
 def load_user(user_id):
@@ -123,10 +120,10 @@ def callback():
     else:
         return "User email not available or not verified by Google.", 400
     user = User(
-    id_=unique_id, name=users_name, email=users_email, profile_pic=picture
+     id = unique_id, name=users_name, email=users_email, profile_pic=picture
 )
-    if not User.get(unique_id):
-        User.create(unique_id, users_name, users_email, picture)
+    if User.get(unique_id) is None:
+        User.create(unique_id,users_name,picture, users_email)
     login_user(user)
     return redirect(url_for("dashboard"))
 
@@ -160,19 +157,12 @@ def aboutus():
 @login_required
 def files():
         try:
-            print(current_user.email)
-            Connection_Database = mysql.connector.connect(host=IPAddr, user="root", database="ispj", password="")
-            Cursor = Connection_Database.cursor()
             query = f"SELECT UserLevel FROM users WHERE User = '{current_user.email}'"
-            Cursor.execute(query)
-            UserLevel = Cursor.fetchone()
+            UserLevel = sql_query(query)
             query = f"SELECT FileID, FileName, Status, AccessLevel FROM documents WHERE AccessLevel <= {UserLevel}"
-            Cursor.execute(query)
-            filedetails = Cursor.fetchall()
+            filedetails = sql_query(query)
             for filedetail in filedetails:
                 print(filedetail[0],filedetail[1],filedetail[2])
-            Cursor.close()
-            Connection_Database.close()
         except Exception as e:
             print (f"Error: {e}")
         return render_template("files.html")
