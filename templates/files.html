@@ -28,6 +28,8 @@
 <form id="uploadForm" enctype="multipart/form-data" style="margin-top: 70px;">
     <label for="file">Choose a file:</label>
     <input type="file" name="file" id="file" accept=".jpg, .jpeg, .png, .pdf, .docx" required>
+    <label for="auto">Set optional auto-delete time (hr):</label>
+    <input type="text" name="auto" id="auto">
     <br>
     <button type="button" onclick="submitForm()">Upload</button>
 </form>

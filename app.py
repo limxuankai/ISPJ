@@ -9,6 +9,7 @@ import nltk
 import uuid
 import boto3
 import jwt
+from datetime import datetime, timedelta
 from nltk.corpus import stopwords
 from nltk.tokenize import word_tokenize
 from sklearn.feature_extraction.text import CountVectorizer
@@ -28,6 +29,7 @@ from flask_login import (
 from oauthlib.oauth2 import WebApplicationClient
 import requests
 import base64
+import threading
 import classification
 from filedetailidk import *
 from filedetailidk2 import *
@@ -39,6 +41,7 @@ import mysql.connector
 from test import generatekey, Evaluate_Key
 from encryption import encrypt, decrypt
 import io
+import time
 
 app = Flask(__name__)
 CORS(app)  # Allow cross-origin requests
@@ -48,6 +51,8 @@ UPLOAD_FACE_FOLDER = 'faceuploads'
 JWTSECRET_KEY = 'Ispjsofun'
 
 IPAddr = "104.196.231.172"
+
+scheduled_deletions = {}
 
 app.logger.setLevel(logging.INFO)
 for handler in app.logger.handlers[:]:
@@ -159,12 +164,8 @@ def dashboard():
         changeaccess = Cursor.fetchall()
         for row in changeaccess:
             accessliste.append(docdetail(row[0], row[1], row[2], row[3]))
-        Cursor.close()
-        Cursor = Connection_Database.cursor()
-        Connection_Database.close()
+        
 
-        Connection_Database = mysql.connector.connect(host=IPAddr, user="root", database="ispj", password="")
-        Cursor = Connection_Database.cursor()
         query_2 = "SELECT Email, ROLE, Level, ID FROM user WHERE ROLE = 'User'"
         Cursor.execute(query_2)
         result_set_2 = Cursor.fetchall()
@@ -378,6 +379,7 @@ def delete_file():
         Cursor.close()
         Connection_Database.close()
         app.logger.info("user deleted file")
+        flash('file deleted')
         return redirect(url_for("files"))
     else:
         flash('You are not authorised!')
@@ -421,6 +423,8 @@ def upload():
     bucket_name = 'documents-for-ispj'
 
     uploaded_file = request.files['file']
+    expiration_time = request.form['auto']
+    print(f'expiration_time{expiration_time}')
     server_key, server_table, client_key, client_table = generatekey()
     KEY = Evaluate_Key(server_key, server_table, client_key, client_table)
     encryted_file = uploaded_file.read()
@@ -429,8 +433,13 @@ def upload():
     server_table = (','.join(server_table))
 
     result = 'success'  # Default to success
+    
+
 
     if uploaded_file.filename != '':
+        if expiration_time != '':
+            expiration_time = float(request.form['auto'])
+            schedule_deletion(uploaded_file.filename, expiration_time)
         Connection_Database = mysql.connector.connect(host=IPAddr, user="root", database="ispj", password="")
         Cursor = Connection_Database.cursor()
         query = f"SELECT * FROM document WHERE Name = '{uploaded_file.filename}'"
@@ -460,6 +469,38 @@ def upload():
 
     return jsonify(result)
 
+def schedule_deletion(filename, expiration_hours):
+    # Calculate the deletion time based on the current time plus the specified hours
+    expiration_datetime = datetime.utcnow() + timedelta(hours=expiration_hours)
+    print(f"expiration_datetime {expiration_datetime}")
+    # Calculate the delay until deletion
+    delay_seconds = (expiration_datetime - datetime.utcnow()).total_seconds()
+    print(f"delay_seconds {delay_seconds}")
+    # Schedule the deletion in a background thread
+    deletion_thread = threading.Thread(target=delayed_deletion, args=(filename,), kwargs={'delay_seconds': delay_seconds})
+    deletion_thread.start()
+
+    # Store the scheduled deletion time
+    scheduled_deletions[filename] = expiration_datetime
+
+def delayed_deletion(filename, delay_seconds):
+    # Wait for the specified delay
+    time.sleep(delay_seconds)
+    
+    Connection_Database = mysql.connector.connect(host=IPAddr, user="root", database="ispj", password="")
+    Cursor = Connection_Database.cursor()
+    query3 = f"DELETE FROM document WHERE Name = '{filename}';"
+    Cursor.execute(query3)
+    Connection_Database.commit()
+    Cursor.close()
+    Connection_Database.close()
+    print("auto deleted")
+    
+    
+    
+    
+    
+      
 
 
 
