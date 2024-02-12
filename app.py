@@ -359,7 +359,14 @@ def update_useraccess():
 
 @app.route('/delete_file', methods=['POST'])
 def delete_file():
+    aws_access_key_id = 'AKIA2LOZ4RPA6DWSOH3Q'
+    aws_secret_access_key = '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'
+    region_name = 'ap-southeast-2'
+    bucket_name = 'documents-for-ispj'
     filename = request.form.get('filename')
+    s3 = boto3.client('s3', aws_access_key_id=aws_access_key_id, aws_secret_access_key=aws_secret_access_key, region_name=region_name)
+    s3.delete_object(Bucket=bucket_name, Key=filename)
+
     Connection_Database = mysql.connector.connect(host=IPAddr, user="root", database="ispj", password="")
     Cursor = Connection_Database.cursor()
     query1 = f"SELECT ID FROM user WHERE Email = '{current_user.email}'"
@@ -485,7 +492,12 @@ def schedule_deletion(filename, expiration_hours):
 def delayed_deletion(filename, delay_seconds):
     # Wait for the specified delay
     time.sleep(delay_seconds)
-    
+    aws_access_key_id = 'AKIA2LOZ4RPA6DWSOH3Q'
+    aws_secret_access_key = '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'
+    region_name = 'ap-southeast-2'
+    bucket_name = 'documents-for-ispj'
+    s3 = boto3.client('s3', aws_access_key_id=aws_access_key_id, aws_secret_access_key=aws_secret_access_key, region_name=region_name)
+    s3.delete_object(Bucket=bucket_name, Key=filename)
     Connection_Database = mysql.connector.connect(host=IPAddr, user="root", database="ispj", password="")
     Cursor = Connection_Database.cursor()
     query3 = f"DELETE FROM document WHERE Name = '{filename}';"
