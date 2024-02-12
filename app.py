@@ -1,6 +1,6 @@
 import os
 import json
-import sqlite3
+import shutil
 import datetime
 import boto3
 import docx2txt
@@ -15,7 +15,7 @@ from sklearn.model_selection import train_test_split
 from sklearn.naive_bayes import MultinomialNB
 from sklearn.metrics import accuracy_score
 from datetime import datetime, timedelta
-from flask import Flask, redirect, request, url_for,render_template,abort,flash, jsonify
+from flask import Flask, redirect, request, url_for,render_template,abort,flash, jsonify, send_file, after_this_request
 from flask_login import (
     LoginManager,
     current_user,
@@ -35,6 +35,9 @@ import mysql.connector
 from test import generatekey, Evaluate_Key
 from encryption import encrypt, decrypt
 import io
+import tempfile
+import magic
+
 
 app = Flask(__name__)
 IPAddr = "104.196.231.172"
@@ -132,23 +135,24 @@ def callback():
 @app.route('/dashboard', methods=['GET','POST'])
 @login_required
 def dashboard():
+    check_and_delete("static/files/")
     accessliste = []
     useraccessliste = []
     User_Role = sql_query(f"SELECT ROLE FROM user WHERE ID={current_user.id}")
     app.logger.info(f'{current_user.name} has arrived at dashboard')
     if User_Role[0][0] != 'Admin':
         Access_Level = sql_query(f"SELECT Level FROM user WHERE Email = '{current_user.email}'")
-        Files = sql_query(f"SELECT ID, Name, Status, Access_Level FROM document WHERE Access_Level <= {Access_Level[0][0]}")
-        List_Files = [docdetail(row[0],row[1],row[2],row[3]) for row in Files]
-        return render_template("dashboard.html", fileliste = List_Files)
+        Files = sql_query(f"SELECT ID, Name, Status, Access_Level, User_ID FROM document WHERE Access_Level <= {Access_Level[0][0]}")
+        List_Files = [docdetail(row[0],row[1],row[2],row[3], row[4]) for row in Files]
+        return render_template("dashboard.html", fileliste = List_Files, user=current_user)
     else:
         Connection_Database = mysql.connector.connect(host=IPAddr, user="root", database="ispj", password="")
         Cursor = Connection_Database.cursor()
-        query = f"SELECT ID, Name, Status, Access_Level FROM document WHERE Status <> 'Classified' "
+        query = f"SELECT ID, Name, Status, Access_Level, User_ID FROM document WHERE Status <> 'Classified' "
         Cursor.execute(query)
         changeaccess = Cursor.fetchall()
         for row in changeaccess:
-            accessliste.append(docdetail(row[0], row[1], row[2], row[3]))
+            accessliste.append(docdetail(row[0], row[1], row[2], row[3],row[4]))
         Cursor.close()
         Cursor = Connection_Database.cursor()
         Connection_Database.close()
@@ -255,7 +259,7 @@ def files():
             Connection_Database.close()
         except Exception as e:
             print (f"Error: {e}")
-        return render_template("files.html", fileliste=fileliste)
+        return render_template("files.html", fileliste=fileliste, user=current_user)
 
 
 @app.route('/upload', methods=['POST'])
@@ -273,7 +277,7 @@ def upload():
     encryted_file = encrypt(encryted_file, KEY)
     encrypted_file = io.BytesIO(encryted_file)
     server_table = (','.join(server_table))
-
+    client_table = (','.join(client_table))
     if uploaded_file.filename != '':       
         Connection_Database = mysql.connector.connect(host=IPAddr, user="root", database="ispj", password="")
         Cursor = Connection_Database.cursor()
@@ -286,7 +290,7 @@ def upload():
                 alert('duplicate name detected');
             </script>
             """
-            return render_template('files.html', popup=popup)
+            return render_template('files.html', popup=popup, user=current_user)
         Cursor.close()
         Connection_Database.close()
         
@@ -302,7 +306,7 @@ def upload():
                 alert('Upload failed!');
             </script>
             """
-            return render_template('files.html', popup=popup)
+            return render_template('files.html', popup=popup, user=current_user)
         try:
             print({current_user.id})
             Connection_Database = mysql.connector.connect(host=IPAddr, user="root", database="ispj", password="")
@@ -318,7 +322,7 @@ def upload():
                 alert('Upload successful!');
             </script>
             """
-            return render_template('files.html', popup=popup)
+            return render_template('files.html', popup=popup, client = [client_key, client_table], user=current_user)
         except Exception as e:
             print(f'Failed to update db: {e}')
             popup = """
@@ -326,7 +330,7 @@ def upload():
                 alert('update failed');
             </script>
             """
-            return render_template('files.html', popup=popup)
+            return render_template('files.html', popup=popup, user=current_user)
         
 
 
@@ -363,105 +367,107 @@ def generate_presigned_url(s3_client, bucket, key, expiration_time, content_disp
     )
     return url
 
-# @app.route('/upload', methods=['POST'])
-# def upload():
-#     # AWS credentials and S3 bucket information
-#     aws_access_key_id = 'AKIA2LOZ4RPA6DWSOH3Q'
-#     aws_secret_access_key = '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'
-#     region_name = 'ap-southeast-2'
-#     bucket_name = 'documents-for-ispj'
-
-#     # Get the uploaded file from the form
-#     uploaded_file = request.files['image']
-
-#     # Check if a file is selected
-#     if uploaded_file.filename != '':
-#         # Create an S3 client
-#         s3 = boto3.client('s3', aws_access_key_id=aws_access_key_id, aws_secret_access_key=aws_secret_access_key, region_name=region_name)
-
-#         # Upload the file to S3
-#         s3.upload_fileobj(uploaded_file, bucket_name, uploaded_file.filename)
-
-#         # Make the uploaded object public
-#         s3.copy_object(
-#             Bucket=bucket_name,
-#             CopySource={'Bucket': bucket_name, 'Key': uploaded_file.filename},
-#             Key=uploaded_file.filename,
-#             MetadataDirective='REPLACE',
-#             ContentType='image/jpg',
-#             Metadata={'Content-Disposition': 'inline'}
-#         )
-#         s3.put_object_acl(ACL='public-read', Bucket=bucket_name, Key=uploaded_file.filename)
-
-#         # Get the public URL of the object
-#         object_url = f"https://{bucket_name}.s3.{region_name}.amazonaws.com/{uploaded_file.filename}"
-
-#         print(f"The public URL of the image for preview is: {object_url}")
-
-#         return f"File successfully uploaded. Public URL: {object_url}"
-
-#     return "No file selected."
-
-
-@app.route('/success', methods=['POST'])
-@login_required
-def upload_file():
-    if request.method == 'POST':
-        f = request.files['file']
-        file_path = os.path.join(app.config['UPLOAD_FOLDER'], f.filename)
-        f.save(file_path)
-        app.logger.info(f'{current_user.name} uploaded {f.filename}')
-        server_key, client_table, client_key, server_table = generatekey()
-        with open('client_side.txt', "w") as client_file:
-            client_file.write(client_key + '\n')
-            client_file.write(','.join(client_table))
-        with open('server_side.txt', "w") as server_file:
-            server_file.write(server_key + '\n')
-            server_file.write(','.join(server_table))
-    return render_template('success.html', file_path= file_path, filename = f.filename)
-
-@app.route('/encryption')
-@login_required
-def encryption():
-    with open('client_side.txt', 'r') as client_file:
-        lines = client_file.readlines()
-        client_key = lines[0]
-        client_table = lines[1]
-    with open('server_side.txt', 'r') as server_file:
-        lines = server_file.readlines()
-        server_key = lines[0]
-        server_table = lines[1]
-    formatted_client_list = [item.strip(',') for item in list(client_table) if item.strip(',') != '']
-    formatted_server_list = [item.strip(',') for item in list(server_table) if item.strip(',') != '']
-    KEY = Evaluate_Key(server_key, formatted_server_list, client_key, formatted_client_list)
-    with open('static/files/20240205_190306.jpg', 'rb') as plain:
-        Encrypted = encrypt(plain.read(), KEY)
-    file_path = app.config['UPLOAD_FOLDER']
-    with open('static/files/encrypted.jpg', 'wb') as e:
-        e.write(Encrypted)
-
-    return render_template('encryption.html', Encrypted_File = 'static/files/encrypted.jpg')
 
 @app.route('/decryption')
 @login_required
 def decryption():
-    with open('client_side.txt', 'r') as client_file:
-        lines = client_file.readlines()
-        client_key = lines[0]
-        client_table = lines[1]
-    with open('server_side.txt', 'r') as server_file:
-        lines = server_file.readlines()
-        server_key = lines[0]
-        server_table = lines[1]
-    formatted_client_list = [item.strip(',') for item in list(client_table) if item.strip(',') != '']
-    formatted_server_list = [item.strip(',') for item in list(server_table) if item.strip(',') != '']
-    KEY = Evaluate_Key(server_key, formatted_server_list, client_key, formatted_client_list)
-    with open('static/files/encrypted.jpg', 'rb') as cipher:
-        Decrypted = decrypt(cipher.read(), KEY)
-    file_path = app.config['UPLOAD_FOLDER']
-    with open('static/files/decrypted.jpg', 'wb') as e:
-        e.write(Decrypted)
+    return render_template('decryption.html', user=current_user)
 
-    return render_template('decryption.html', Decrypted_File = 'static/files/decrypted.jpg')
+
+@app.route('/download-file/<client_key>/<client_table>')
+def download_file(client_key, client_table):
+    try:
+        with tempfile.NamedTemporaryFile(delete=False) as temp_file:
+            temp_file.write(client_key.encode() + b'\n')  
+            temp_file.write(','.join(client_table).encode())
+            temp_file_path = temp_file.name
+            
+            temp_file.close()
+            
+            return send_file(temp_file_path, as_attachment=True, download_name='encrypted.txt')
+    except Exception as e:
+        return str(e), 404
+
+@app.route('/decrypt', methods=['POST'])
+@login_required
+def decrypts():
+    uploaded_file = [request.files['file'], request.files['key']]
+    lines = uploaded_file[1].readlines()
+    client_key = lines[0]
+    client_table = lines[1]
+    client_key = client_key.decode()
+    client_table = client_table.decode()
+    server_key, server_table = sql_query(f"SELECT QUBITS, LIST FROM document WHERE Name= '{uploaded_file[0].filename}'")[0]
+    formatted_server_list = [item.strip(',') for item in list(server_table) if item.strip(',') != '']
+    formatted_client_list = [item.strip(',') for item in list(client_table) if item.strip(',') != '']
+    formatted_client_list = ''.join(formatted_client_list)
+    KEY = Evaluate_Key(server_key, formatted_server_list, client_key, formatted_client_list)
+    PT = decrypt(uploaded_file[0].read(), KEY)
+    file_extension = get_file_extension(PT)
+    file_path = 'static/files/decrypt' + file_extension
+    file_name = 'decrypt' + file_extension
+    with open(file_path, 'wb') as e:
+        e.write(PT)
+    return render_template('decryption.html', file_name = file_name, user=current_user, CT = PT)
+
+def get_file_extension(file_content):
+    # Initialize magic
+    magic_instance = magic.Magic(mime=True)
+
+    # Get the MIME type of the file
+    mime_type = magic_instance.from_buffer(file_content)
+
+    # Get the file extension based on the MIME type
+    mime_to_ext = {
+    'image/jpeg': '.jpg',
+    'image/png': '.png',
+    'image/gif': '.gif',
+    'image/bmp': '.bmp',
+    'image/tiff': '.tiff',
+    'image/webp': '.webp',
+    'application/pdf': '.pdf',
+    'text/plain': '.txt',
+    'application/json': '.json',
+    'application/xml': '.xml',
+    'application/zip': '.zip',
+    'application/x-tar': '.tar',
+    'application/x-gzip': '.gz',
+    'application/x-bzip2': '.bz2',
+    'application/x-rar-compressed': '.rar',
+    'video/mp4': '.mp4',
+    'video/mpeg': '.mpeg',
+    'audio/mpeg': '.mp3',
+    'audio/wav': '.wav',
+    'audio/ogg': '.ogg',
+    'application/vnd.ms-excel': '.xls',
+    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': '.xlsx',
+    'application/msword': '.doc',
+    'application/vnd.openxmlformats-officedocument.wordprocessingml.document': '.docx',
+   }
+    # If the MIME type is not recognized, use a default extension
+    default_extension = '.txt'
+    file_extension = mime_to_ext.get(mime_type, default_extension)
+
+    return file_extension
+
+@app.route('/download/<file_name>')
+def download(file_name):
+    file_path = 'static/files/' + file_name
+    return send_file(
+        file_path,
+        as_attachment=True,
+        download_name='temp_file.png'
+        )
+
+def check_and_delete(directory):
+    items = os.listdir(directory)
+    for item in items:
+        item_path = os.path.join(directory, item)
+        if os.path.isfile(item_path):
+                os.remove(item_path)
+        elif os.path.isdir(item_path):
+                check_and_delete(item_path)
+    return 
+
 if __name__ == '__main__':
     app.run(debug=True, ssl_context="adhoc")

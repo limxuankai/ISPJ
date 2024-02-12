@@ -1,9 +1,10 @@
 class docdetail:
-    def __init__(self, FileID, FileName, Status, AccessLevel):
+    def __init__(self, FileID, FileName, Status, AccessLevel, User):
         self.__FileID = FileID
         self.__FileName = FileName
         self.__Status = Status
         self.__AccessLevel = AccessLevel
+        self.__User = User
     
     def get_fileid(self):
         return self.__FileID
@@ -29,4 +30,6 @@ class docdetail:
     def set_accesslevel(self, value):
         self.__AccessLevel = value
 
+    def get_User(self):
+        return self.__User
     

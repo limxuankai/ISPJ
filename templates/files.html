@@ -3,122 +3,48 @@
 <head>
     <link rel="stylesheet" href="https://www.w3schools.com/w3css/4/w3.css">
     <link rel="stylesheet" href="/static/styles/style.css">
+    <link rel="icon" href="https://img.icons8.com/plasticine/100/box-lock-1.png" alt="box-lock-1"/>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% block title %} {% endblock %}</title>
+    <title>{% block title %} Upload {% endblock %}</title>
 </head>
 {% block navbar %}
 {% include 'includes/acc_nav.html' %} 
 {% endblock %}
 {% block content %}
 <body>
-    
-    {{ popup | safe }}
-    <form action="/upload" method="post" enctype="multipart/form-data" style="margin-top: 70px;">
-        <label for="file">Choose a file:</label>
-        <input type="file" name="file" id="file" accept=".jpg, .jpeg, .png, .pdf, .docx" required>
-        <br>
-        <button type="submit">Upload</button>
-    </form>
-
-    <table>
-        <tr>
-            <th>File ID</th>
-            <th>File Name</th>
-            <th>File Access Level</th>
-        </tr>
-    
-        {% for i in fileliste %}
-            {% if i.get_accesslevel() == 3 and i.get_status() == "Classified" %}
-                <tr>
-                    <td>{{i.get_fileid()}}</td>
-                    <td><a href="{{ url_for('presigned', filename=i.get_filename()) }}">{{i.get_filename()}}</a></td>
-                    <td>{{i.get_accesslevel()}}</td>
-                </tr>
-            {% endif %}
-        {% endfor %}
-    
-        {% for i in fileliste %}
-            {% if i.get_accesslevel() == 2 and i.get_status() == 'Classified' %}
-                <tr>
-                    <td>{{i.get_fileid()}}</td>
-                    <td><a href="{{ url_for('presigned', filename=i.get_filename()) }}">{{i.get_filename()}}</a></td>
-                    <td>{{i.get_accesslevel()}}</td>
-                </tr>
-            {% endif %}
-        {% endfor %}
-    
-        {% for i in fileliste %} 
-            {% if i.get_accesslevel() == 1 and i.get_status() == "Classified" %}
-                <tr>
-                    <td>{{i.get_fileid()}}</td>
-                    <td><a href="{{ url_for('presigned', filename=i.get_filename()) }}">{{i.get_filename()}}</a></td>
-                    <td>{{i.get_accesslevel()}}</td>
-                </tr>
-            {% endif %}
-        {% endfor %}
-    </table>
-    <!-- <div style="display: flex; flex-direction: column;">
-
-        {% for i in fileliste %} 
-            {% if i.get_accesslevel() == 3 and i.get_status() == "Classified"%}
-                <div style="display: flex;">
-                    <div style="margin-right: 20px;">{{i.get_fileid()}} </div>
-                <a href="{{ url_for('presigned', filename=i.get_filename()) }}">
-                    <div style="margin-right: 20px;">{{i.get_filename()}} </div>
-                </a>
-                    <div style="margin-right: 20px;">{{i.get_accesslevel()}} </div>
-                </div>
-            {% endif %}
-        {% endfor %}
-    
-        {% for i in fileliste %}
-            {% if i.get_accesslevel() == 2 and i.get_status() == 'Classified'%}
-            <div style="display: flex;">
-                <div style="margin-right: 20px;">{{i.get_fileid()}} </div>
-                <a href="{{ url_for('presigned', filename=i.get_filename()) }}">
-                    <div style="margin-right: 20px;">{{i.get_filename()}} </div>
-                </a>
-                <div style="margin-right: 20px;">{{i.get_accesslevel()}} </div>
-            </div>
-            {% endif %}
-        {% endfor %}
-    
-        {% for i in fileliste %} 
-            {% if i.get_accesslevel() == 1 and i.get_status() == "Classified"%}
-                <div style="display: flex;">
-                    <div style="margin-right: 20px;">{{i.get_fileid()}} </div>
-                    <a href="{{ url_for('presigned', filename=i.get_filename()) }}"></a>
-                        <div style="margin-right: 20px;">{{i.get_filename()}} </div>
-                    </a>
-                    <div style="margin-right: 20px;">{{i.get_accesslevel()}} </div>
-                </div>
-            {% endif %}
-        {% endfor %}
-    </div> -->
     <style>
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-bottom: 20px;
-            margin-top: 20px;
-        }
-    
-        th, td {
-            border: 1px solid #ddd;
-            padding: 8px;
-            text-align: left;
-        }
-    
-        th {
-            background-color: #f2f2f2;
-        }
-    
-        a {
-            text-decoration: none;
-            color: #333;
-        }
+    .w3-input-file {
+      padding: 10px;
+      font-size: 16px;
+    }
 
-    </style>
+    .w3-btn-upload {
+      padding: 12px 20px;
+      font-size: 16px;
+    }
+      </style>
+    </head>
+    <body>
+      <div class="container">
+        <div class="container" style="margin-top: 20px;">
+            <img src="{{ user.profile_pic }}" alt="Avatar" class="w3-left w3-circle w3-margin-right" style="width:60px">
+            <h4>{{ user.name }}</h4><br>
+            <h2 class="w3-center">Upload Files</h2>
+            <hr class="w3-clear">
+          </div>  
+    {{ popup | safe }}
+    <div class="w3-container w3-margin">
+        <form class="w3-container" action="/upload" method="post" enctype="multipart/form-data">
+          <label class="w3-text-blue"><b>Select File(s) to Upload:</b></label>
+          <input class="w3-input w3-border" type="file" name="file" multiple id="file" accept=".jpg, .jpeg, .png, .pdf, .docx" required>
+          <br>
+          <button class="w3-btn w3-blue w3-margin-bottom">Upload</button>
+        </form>
+
+    {% if client %}
+    <a class="download-link" href="/download-file/{{ client[0] }}/{{ client[1] }}">Client Key</a>
+    {% endif %}
+    </div>
 </body>
  {% endblock %}
