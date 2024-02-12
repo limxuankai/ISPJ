@@ -9,6 +9,7 @@ import nltk
 import uuid
 import boto3
 import jwt
+import bcrypt
 from nltk.corpus import stopwords
 from nltk.tokenize import word_tokenize
 from sklearn.feature_extraction.text import CountVectorizer
@@ -263,9 +264,6 @@ def presigned():
     aws_secret_access_key = 'vplLA68AUoM75+MEcTAhMzJIkNvM8HSOdBZglGuI'
     region_name = 'ap-southeast-2'
     bucket_name = 'documents-for-ispj'
-
-    success = request.args.get('success', False)
-
     
     filename = request.args.get('filename')   
     Connection_Database = mysql.connector.connect(host=IPAddr, user="root", database="ispj", password="")
@@ -277,11 +275,9 @@ def presigned():
     Cursor.close()
     
 
-    if not success and FileLevel[0] == 3:
-        success = request.args.get('success', False)
-        if not success:
-            token = jwt.encode({'filename': filename}, JWTSECRET_KEY, algorithm='HS256')
-            return redirect(url_for('faceauth', token=token))
+    if FileLevel[0] == 3:
+        token = jwt.encode({'filename': filename}, JWTSECRET_KEY, algorithm='HS256')
+        return redirect(url_for('faceauth', token=token))
         
     
     Cursor = Connection_Database.cursor()
@@ -428,9 +424,17 @@ def upload():
     region_name = 'ap-southeast-2'
     bucket_name = 'documents-for-ispj'
 
+
+
+
+
+
     uploaded_file = request.files['file']
     expiration_time = request.form['auto']
-    print(f'expiration_time{expiration_time}')
+    docpassword = request.form['password']
+    hashed_password = bcrypt.hashpw(docpassword.encode('utf-8'), bcrypt.gensalt())
+    print(f'expiration_time: {expiration_time}')
+    print(f'hashed_password: {hashed_password}')
     server_key, server_table, client_key, client_table = generatekey()
     KEY = Evaluate_Key(server_key, server_table, client_key, client_table)
     encryted_file = uploaded_file.read()
@@ -438,7 +442,7 @@ def upload():
     encrypted_file = io.BytesIO(encryted_file)
     server_table = (','.join(server_table))
 
-    result = 'success'  # Default to success
+    result = 'fail'  # Default to success
     
 
 
@@ -463,7 +467,7 @@ def upload():
                 print({current_user.id})
                 Connection_Database = mysql.connector.connect(host=IPAddr, user="root", database="ispj", password="")
                 Cursor = Connection_Database.cursor()
-                query = f"INSERT INTO document (ID, Name, Status, Access_Level,User_ID, QUBITS, LIST) VALUES ('{uuid.uuid4()}','{uploaded_file.filename}','BeforeML',1,'{current_user.id}', '{server_key}', '{server_table}')"
+                query = f"INSERT INTO document (ID, Name, Status, Access_Level,User_ID, QUBITS, LIST, Password) VALUES ('{uuid.uuid4()}','{uploaded_file.filename}','BeforeML',1,'{current_user.id}', '{server_key}', '{server_table}', '{hashed_password.decode('utf-8')}')"
                 Cursor.execute(query)
                 Connection_Database.commit()
                 Cursor.close()
