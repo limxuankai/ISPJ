@@ -195,6 +195,7 @@ def aboutus():
     return render_template("aboutus.html")
 
 @app.route('/faceauth')
+@login_required
 def faceauth():
     app.logger.info("user doing face authentication")
     token = request.args.get('token')
@@ -257,7 +258,36 @@ def authenticate():
     except Exception as e:
         return jsonify({"success": False, "error": str(e)}), 500
     
+@app.route('/verify', methods=['GET','POST'])
+@login_required
+def verify():
+    if request.method == 'POST':
+        entered_password = request.form.get('password')
+        filename = request.args.get('filename')
+        Connection_Database = mysql.connector.connect(host=IPAddr, user="root", database="ispj", password="")
+        Cursor = Connection_Database.cursor()
+        query = f"SELECT Password FROM document WHERE Name = '{filename}' "
+        Cursor.execute(query)
+        hashed_password = Cursor.fetchone()
+        hashed_password = hashed_password[0]
+        hashed_password = hashed_password.encode('utf8')
+        if check_password(entered_password, hashed_password):
+            # Password is correct, redirect to success page
+            return redirect(url_for('presigned',filename=filename, success=True))
+        else:
+            print("password is incorrect")
+            # Password is incorrect, you may want to show an error message
+            return render_template('verify.html', error='Incorrect password')
+
+    # If it's a GET request or incorrect password, render the verification page
+    return render_template('verify.html', error=None)
+
+def check_password(plain_password, hashed_password):
+    # Check if a plain password matches a hashed password
+    return bcrypt.checkpw(plain_password.encode('utf-8'), hashed_password)
+
 @app.route('/presigned', methods=['GET','POST'])
+@login_required
 def presigned():
     # AWS credentials and S3 bucket information
     aws_access_key_id = 'AKIA2LOZ4RPA6DWSOH3Q'
@@ -265,7 +295,8 @@ def presigned():
     region_name = 'ap-southeast-2'
     bucket_name = 'documents-for-ispj'
     
-    filename = request.args.get('filename')   
+    filename = request.args.get('filename')  
+    success = request.args.get('success', False) 
     Connection_Database = mysql.connector.connect(host=IPAddr, user="root", database="ispj", password="")
     Cursor = Connection_Database.cursor()
     query = f"SELECT Access_Level FROM document WHERE Name = '{filename}' "
@@ -273,12 +304,31 @@ def presigned():
     FileLevel = Cursor.fetchone()
     
     Cursor.close()
-    
-
-    if FileLevel[0] == 3:
+    if FileLevel[0] == 3 and success:
         token = jwt.encode({'filename': filename}, JWTSECRET_KEY, algorithm='HS256')
         return redirect(url_for('faceauth', token=token))
         
+    if success:
+        Cursor = Connection_Database.cursor()
+        query = f"SELECT Level, Role FROM user WHERE Email = '{current_user.email}' "
+        Cursor.execute(query)
+        userinfo = Cursor.fetchone()
+        Level = userinfo[0]
+        print(Level)
+        Role = userinfo[1]
+        print(Role)
+        print(FileLevel)
+        Cursor.close()
+        Connection_Database.close()
+        if Level >= FileLevel[0] or Role == "Admin":
+            s3 = boto3.client('s3', aws_access_key_id=aws_access_key_id, aws_secret_access_key=aws_secret_access_key, region_name=region_name)
+            preview_presigned_url = generate_presigned_url(s3, bucket_name, filename, expiration_time=180, content_disposition='inline')
+            print(f"level 1{preview_presigned_url}")
+            return redirect(preview_presigned_url, code=302)
+
+
+    if FileLevel[0] == 2 or FileLevel[0] ==3:
+        return redirect(url_for("verify", filename=filename))
     
     Cursor = Connection_Database.cursor()
     query = f"SELECT Level, Role FROM user WHERE Email = '{current_user.email}' "

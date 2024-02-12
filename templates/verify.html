@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <link rel="stylesheet" href="https://www.w3schools.com/w3css/4/w3.css">
+    <link rel="stylesheet" href="/static/styles/style.css">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %} {% endblock %}</title>
+</head>
+{% block navbar %}
+{% include 'includes/acc_nav.html' %} 
+{% endblock %}
+{% block content %}
+<head>
+    <script>
+    window.onload = function() {
+        showPasswordPrompt();
+    };
+
+    function showPasswordPrompt() {
+        var password = prompt("Enter password:");
+        if (password !== null) {
+            // If the user entered a password, submit the form with the password
+            document.getElementById("passwordForm").elements["password"].value = password;
+            document.getElementById("passwordForm").submit();
+        }
+    }
+</script>
+</head>
+<body>
+{% if error %}
+<p>{{ error }}</p>
+{% endif %}
+
+<form id="passwordForm" method="post" style="display: none;">
+<input type="password" name="password" required>
+<input type="submit" value="Submit">
+</form>
+</body>
+ {% endblock %}

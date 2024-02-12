@@ -98,44 +98,7 @@
             {% endif %}
         {% endfor %}
     </table>
-    <!-- <div style="display: flex; flex-direction: column;">
-
-        {% for i in fileliste %} 
-            {% if i.get_accesslevel() == 3 and i.get_status() == "Classified"%}
-                <div style="display: flex;">
-                    <div style="margin-right: 20px;">{{i.get_fileid()}} </div>
-                <a href="{{ url_for('presigned', filename=i.get_filename()) }}">
-                    <div style="margin-right: 20px;">{{i.get_filename()}} </div>
-                </a>
-                    <div style="margin-right: 20px;">{{i.get_accesslevel()}} </div>
-                </div>
-            {% endif %}
-        {% endfor %}
     
-        {% for i in fileliste %}
-            {% if i.get_accesslevel() == 2 and i.get_status() == 'Classified'%}
-            <div style="display: flex;">
-                <div style="margin-right: 20px;">{{i.get_fileid()}} </div>
-                <a href="{{ url_for('presigned', filename=i.get_filename()) }}">
-                    <div style="margin-right: 20px;">{{i.get_filename()}} </div>
-                </a>
-                <div style="margin-right: 20px;">{{i.get_accesslevel()}} </div>
-            </div>
-            {% endif %}
-        {% endfor %}
-    
-        {% for i in fileliste %} 
-            {% if i.get_accesslevel() == 1 and i.get_status() == "Classified"%}
-                <div style="display: flex;">
-                    <div style="margin-right: 20px;">{{i.get_fileid()}} </div>
-                    <a href="{{ url_for('presigned', filename=i.get_filename()) }}"></a>
-                        <div style="margin-right: 20px;">{{i.get_filename()}} </div>
-                    </a>
-                    <div style="margin-right: 20px;">{{i.get_accesslevel()}} </div>
-                </div>
-            {% endif %}
-        {% endfor %}
-    </div> -->
     <style>
         table {
             width: 100%;
