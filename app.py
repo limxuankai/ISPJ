@@ -9,7 +9,6 @@ import nltk
 import uuid
 import boto3
 import jwt
-from datetime import datetime, timedelta
 from nltk.corpus import stopwords
 from nltk.tokenize import word_tokenize
 from sklearn.feature_extraction.text import CountVectorizer
