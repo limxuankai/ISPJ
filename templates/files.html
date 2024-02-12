@@ -33,18 +33,156 @@
             <h2 class="w3-center">Upload Files</h2>
             <hr class="w3-clear">
           </div>  
-    {{ popup | safe }}
-    <div class="w3-container w3-margin">
-        <form class="w3-container" action="/upload" method="post" enctype="multipart/form-data">
-          <label class="w3-text-blue"><b>Select File(s) to Upload:</b></label>
-          <input class="w3-input w3-border" type="file" name="file" multiple id="file" accept=".jpg, .jpeg, .png, .pdf, .docx" required>
-          <br>
-          <button class="w3-btn w3-blue w3-margin-bottom">Upload</button>
-        </form>
+    <script>
+        // Function to show the popup message
+        function showPopup() {
+            var message = '{{ get_flashed_messages()[0] if get_flashed_messages() else "" }}';
+            if (message) {
+                alert(message);
+            }
+        }
 
-    {% if client %}
-    <a class="download-link" href="/download-file/{{ client[0] }}/{{ client[1] }}">Client Key</a>
-    {% endif %}
-    </div>
+        // Call the showPopup function on page load
+        window.onload = showPopup;
+    </script>
+    {{ popup | safe }}
+    <form action="/upload" method="post" enctype="multipart/form-data" style="margin-top: 70px;">
+        <label for="file">Choose a file:</label>
+        <input type="file" name="file" id="file" accept=".jpg, .jpeg, .png, .pdf, .docx" required>
+        <br>
+        <button type="submit">Upload</button>
+    </form>
+
+    <table>
+        <tr>
+            <th>File ID</th>
+            <th>File Name</th>
+            <th>File Access Level</th>
+        </tr>
+    
+        {% for i in fileliste %}
+            {% if i.get_accesslevel() == 3 and i.get_status() == "Classified" %}
+                <tr>
+                    <td>{{i.get_fileid()}}</td>
+                    <td><a href="{{ url_for('presigned', filename=i.get_filename()) }}">{{i.get_filename()}}</a></td>
+                    <td>{{i.get_accesslevel()}}</td>
+                </tr>
+            {% endif %}
+        {% endfor %}
+    
+        {% for i in fileliste %}
+            {% if i.get_accesslevel() == 2 and i.get_status() == 'Classified' %}
+                <tr>
+                    <td>{{i.get_fileid()}}</td>
+                    <td><a href="{{ url_for('presigned', filename=i.get_filename()) }}">{{i.get_filename()}}</a></td>
+                    <td>{{i.get_accesslevel()}}</td>
+                </tr>
+            {% endif %}
+        {% endfor %}
+    
+        {% for i in fileliste %} 
+            {% if i.get_accesslevel() == 1 and i.get_status() == "Classified" %}
+                <tr>
+                    <td>{{i.get_fileid()}}</td>
+                    <td><a href="{{ url_for('presigned', filename=i.get_filename()) }}">{{i.get_filename()}}</a></td>
+                    <td>{{i.get_accesslevel()}}</td>
+                </tr>
+            {% endif %}
+        {% endfor %}
+    </table>
+    <!-- <div style="display: flex; flex-direction: column;">
+
+        {% for i in fileliste %} 
+            {% if i.get_accesslevel() == 3 and i.get_status() == "Classified"%}
+                <div style="display: flex;">
+                    <div style="margin-right: 20px;">{{i.get_fileid()}} </div>
+                <a href="{{ url_for('presigned', filename=i.get_filename()) }}">
+                    <div style="margin-right: 20px;">{{i.get_filename()}} </div>
+                </a>
+                    <div style="margin-right: 20px;">{{i.get_accesslevel()}} </div>
+                </div>
+            {% endif %}
+        {% endfor %}
+    
+        {% for i in fileliste %}
+            {% if i.get_accesslevel() == 2 and i.get_status() == 'Classified'%}
+            <div style="display: flex;">
+                <div style="margin-right: 20px;">{{i.get_fileid()}} </div>
+                <a href="{{ url_for('presigned', filename=i.get_filename()) }}">
+                    <div style="margin-right: 20px;">{{i.get_filename()}} </div>
+                </a>
+                <div style="margin-right: 20px;">{{i.get_accesslevel()}} </div>
+            </div>
+            {% endif %}
+        {% endfor %}
+    
+        {% for i in fileliste %} 
+            {% if i.get_accesslevel() == 1 and i.get_status() == "Classified"%}
+                <div style="display: flex;">
+                    <div style="margin-right: 20px;">{{i.get_fileid()}} </div>
+                    <a href="{{ url_for('presigned', filename=i.get_filename()) }}"></a>
+                        <div style="margin-right: 20px;">{{i.get_filename()}} </div>
+                    </a>
+                    <div style="margin-right: 20px;">{{i.get_accesslevel()}} </div>
+                </div>
+            {% endif %}
+        {% endfor %}
+    </div> -->
+    <style>
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 20px;
+            margin-top: 20px;
+        }
+    
+        th, td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: left;
+        }
+    
+        th {
+            background-color: #f2f2f2;
+        }
+    
+        a {
+            text-decoration: none;
+            color: #333;
+        }
+
+    </style>
 </body>
+<script>
+    function submitForm() {
+        var formData = new FormData(document.getElementById('uploadForm'));
+        var xhr = new XMLHttpRequest();
+
+        xhr.open('POST', '/upload', true);
+
+        xhr.onload = function () {
+            if (xhr.status === 200) {
+                var data = JSON.parse(xhr.responseText);
+
+                if (data === 'success') {
+                    alert('Upload successful!');
+                    // Reload the content of the page
+                    location.reload();
+                } else if (data === 'duplicate') {
+                    alert('Duplicate name detected');
+                } else {
+                    alert('Upload failed!');
+                }
+            } else {
+                alert('Request failed!');
+            }
+        };
+
+        xhr.onerror = function () {
+            alert('Request failed!');
+        };
+
+        xhr.send(formData);
+    }
+</script>
  {% endblock %}
