@@ -12,6 +12,18 @@
 {% endblock %}
 {% block content %}
 <body>
+    <script>
+        // Function to show the popup message
+        function showPopup() {
+            var message = '{{ get_flashed_messages()[0] if get_flashed_messages() else "" }}';
+            if (message) {
+                alert(message);
+            }
+        }
+
+        // Call the showPopup function on page load
+        window.onload = showPopup;
+    </script>
     {{ popup | safe }}
 <form id="uploadForm" enctype="multipart/form-data" style="margin-top: 70px;">
     <label for="file">Choose a file:</label>
@@ -25,6 +37,7 @@
             <th>File ID</th>
             <th>File Name</th>
             <th>File Access Level</th>
+            <th>Delete</th>
         </tr>
     
         {% for i in fileliste %}
@@ -33,6 +46,14 @@
                     <td>{{i.get_fileid()}}</td>
                     <td><a href="{{ url_for('presigned', filename=i.get_filename()) }}">{{i.get_filename()}}</a></td>
                     <td>{{i.get_accesslevel()}}</td>
+                    {% if i.get_userid() == userid or userid == "105552234048794201768" %}
+                    <td>
+                        <form action="{{ url_for('delete_file') }}" method="post">
+                            <input type="hidden" name="filename" value="{{ i.get_filename() }}">
+                            <button type="submit">Delete</button>
+                        </form>
+                    </td>
+                    {%endif %}
                 </tr>
             {% endif %}
         {% endfor %}
@@ -43,6 +64,14 @@
                     <td>{{i.get_fileid()}}</td>
                     <td><a href="{{ url_for('presigned', filename=i.get_filename()) }}">{{i.get_filename()}}</a></td>
                     <td>{{i.get_accesslevel()}}</td>
+                    {% if i.get_userid() == userid or userid == "105552234048794201768" %}
+                    <td>
+                        <form action="{{ url_for('delete_file') }}" method="post">
+                            <input type="hidden" name="filename" value="{{ i.get_filename() }}">
+                            <button type="submit">Delete</button>
+                        </form>
+                    </td>
+                    {%endif %}
                 </tr>
             {% endif %}
         {% endfor %}
@@ -53,6 +82,14 @@
                     <td>{{i.get_fileid()}}</td>
                     <td><a href="{{ url_for('presigned', filename=i.get_filename()) }}">{{i.get_filename()}}</a></td>
                     <td>{{i.get_accesslevel()}}</td>
+                    {% if i.get_userid() == userid or userid == "105552234048794201768" %}
+                    <td>
+                        <form action="{{ url_for('delete_file') }}" method="post">
+                            <input type="hidden" name="filename" value="{{ i.get_filename() }}">
+                            <button type="submit">Delete</button>
+                        </form>
+                    </td>
+                    {%endif %}
                 </tr>
             {% endif %}
         {% endfor %}

@@ -30,6 +30,7 @@ import requests
 import base64
 import classification
 from filedetailidk import *
+from filedetailidk2 import *
 from userdetailidk import *
 from user import User, sql_query
 import logging
@@ -356,6 +357,33 @@ def update_useraccess():
         print(e)
         return jsonify({"error": "failed"})
 
+@app.route('/delete_file', methods=['POST'])
+def delete_file():
+    filename = request.form.get('filename')
+    Connection_Database = mysql.connector.connect(host=IPAddr, user="root", database="ispj", password="")
+    Cursor = Connection_Database.cursor()
+    query1 = f"SELECT ID FROM user WHERE Email = '{current_user.email}'"
+    Cursor.execute(query1)
+    UserLevel = Cursor.fetchone()
+    userid = UserLevel[0]
+    query2 = f"SELECT User_ID FROM document WHERE Name = '{filename}'"
+    Cursor.execute(query2)
+    fileuserid = Cursor.fetchone()
+    fileuserid = fileuserid[0]
+    if fileuserid == userid or userid == "105552234048794201768":
+        query3 = f"DELETE FROM document WHERE Name = '{filename}';"
+        print("if user eq user")
+        Cursor.execute(query3)
+        Connection_Database.commit()
+        Cursor.close()
+        Connection_Database.close()
+        app.logger.info("user deleted file")
+        return redirect(url_for("files"))
+    else:
+        flash('You are not authorised!')
+        return redirect(url_for('files'))
+
+
 @app.route('/files')
 @login_required
 def files():
@@ -363,24 +391,26 @@ def files():
         try:
             Connection_Database = mysql.connector.connect(host=IPAddr, user="root", database="ispj", password="")
             Cursor = Connection_Database.cursor()
-            query = f"SELECT Level FROM user WHERE Email = '{current_user.email}'"
+            query = f"SELECT ID, Level FROM user WHERE Email = '{current_user.email}'"
             Cursor.execute(query)
             UserLevel = Cursor.fetchone()
-            UserLevel = UserLevel[0]
-            print(UserLevel)
-            query = f"SELECT ID, Name, Status, Access_Level FROM document WHERE Access_Level <= {UserLevel}"
+            userid = UserLevel[0]
+            userlevel = UserLevel[1]
+            
+            print(f"Userid {userid}")
+            query = f"SELECT ID, Name, Status, Access_Level, User_ID FROM document WHERE Access_Level <= {userlevel}"
             # query = f"SELECT FileID, FileName, Status, AccessLevel FROM documents WHERE AccessLevel <= 3"
             Cursor.execute(query)
             filedetailss = Cursor.fetchall()
             print("got filedetails")
             for row in filedetailss:
-                fileliste.append(docdetail(row[0], row[1], row[2], row[3]))
+                fileliste.append(docdetail2(row[0], row[1], row[2], row[3], row[4]))
                 print("in for loop")
             Cursor.close()
             Connection_Database.close()
         except Exception as e:
             print (f"Error: {e}")
-        return render_template("files.html", fileliste=fileliste)
+        return render_template("files.html", fileliste=fileliste, userid=userid)
 
 @app.route('/upload', methods=['POST'])
 @login_required
