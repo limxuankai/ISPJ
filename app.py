@@ -195,13 +195,10 @@ def aboutus():
 @app.route('/faceauth')
 def faceauth():
     app.logger.info("user doing face authentication")
-    
     token = request.args.get('token')
-    print("idk")
     decoded_token = jwt.decode(token, JWTSECRET_KEY, algorithms=['HS256'])
     filename = decoded_token.get('filename')
     print(f"at faceauth {filename}")
-    # Render your face authentication template with the filename
     return render_template("faceauth.html", filename=filename)
 
 def save_image(data_uri):
@@ -226,8 +223,7 @@ def authenticate():
     if "image" not in request.form:
         return jsonify({"error": "No image data found"}), 400
     image_name = save_image(request.form["image"])
-    # try:
-    if 1 == 1:
+    try:
         response = requests.put(
             "https://rd376l6qic.execute-api.ap-southeast-2.amazonaws.com/dev/ispj-is-extremely-fun-visitor/{}.jpeg".format(image_name),
             headers={"Content-Type": "image/jpeg"},
@@ -247,7 +243,6 @@ def authenticate():
                 aws_secret_access_key = 'vplLA68AUoM75+MEcTAhMzJIkNvM8HSOdBZglGuI'
                 region_name = 'ap-southeast-2'
                 bucket_name = 'documents-for-ispj'
-                print(f"after authenticate {filename}")
                 s3 = boto3.client('s3', aws_access_key_id=aws_access_key_id, aws_secret_access_key=aws_secret_access_key, region_name=region_name)
                 preview_presigned_url = generate_presigned_url(s3, bucket_name, filename, expiration_time=180, content_disposition='inline')
                 print(f"level 3{preview_presigned_url}")
@@ -257,8 +252,8 @@ def authenticate():
                 return jsonify({"success": False, "error": "Authentication failed"}), 401
         else:
             return jsonify({"success": False, "error": "Error during image upload"}), 500
-    # except Exception as e:
-    #     return jsonify({"success": False, "error": str(e)}), 500
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 500
     
 @app.route('/presigned', methods=['GET','POST'])
 def presigned():
@@ -269,16 +264,7 @@ def presigned():
     bucket_name = 'documents-for-ispj'
 
     success = request.args.get('success', False)
-    # if success:
-    #         token = request.args.get('token')
-    #         print("idk")
-    #         decoded_token = jwt.decode(token, JWTSECRET_KEY, algorithms=['HS256'])
-    #         filename = decoded_token.get('filename')
-    #         print(f"at faceauth {filename}")
-    #         s3 = boto3.client('s3', aws_access_key_id=aws_access_key_id, aws_secret_access_key=aws_secret_access_key, region_name=region_name)
-    #         preview_presigned_url = generate_presigned_url(s3, bucket_name, filename, expiration_time=180, content_disposition='inline')
-    #         print(f"level 3{preview_presigned_url}")
-    #         return redirect(preview_presigned_url, code=302)
+
     
     filename = request.args.get('filename')   
     Connection_Database = mysql.connector.connect(host=IPAddr, user="root", database="ispj", password="")
@@ -286,19 +272,13 @@ def presigned():
     query = f"SELECT Access_Level FROM document WHERE Name = '{filename}' "
     Cursor.execute(query)
     FileLevel = Cursor.fetchone()
-
     Cursor.close()
     Connection_Database.close()
 
     if not success and FileLevel[0] == 3:
-        print("pass if")
-        # Check if the authentication was successful
         success = request.args.get('success', False)
         if not success:
-            print("pass if not successful")
-            # Create a JWT containing the filename
             token = jwt.encode({'filename': filename}, JWTSECRET_KEY, algorithm='HS256')
-            # Redirect to face authentication page with the JWT as a parameter
             return redirect(url_for('faceauth', token=token))
    
     s3 = boto3.client('s3', aws_access_key_id=aws_access_key_id, aws_secret_access_key=aws_secret_access_key, region_name=region_name)
