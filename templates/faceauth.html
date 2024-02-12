@@ -87,15 +87,34 @@
             .then(response => response.json())
             .then(data => {
                 if (data.success) {
-                    uploadResultMessage.textContent = `Hi ${data.user.firstName} ${data.user.lastName}, welcome!`;
+                    // Create a button element
+                const downloadButton = document.createElement('button');
+                
+                // Set button text
+                downloadButton.textContent = 'Download Document';
+                
+                // Add a click event listener to the button
+                downloadButton.addEventListener('click', function() {
+                    // Navigate to the URL provided in data.user
+                    window.location.href = data.user;
+                });
+                
+                // Append the button to a container element or directly to the body
+                document.body.appendChild(downloadButton);
+
+                // Hide the message element
+                const uploadResultMessage = document.getElementById('uploadResultMessage');
+                if (uploadResultMessage) {
+                    uploadResultMessage.style.display = 'none';
+                }
                 } else {
                     uploadResultMessage.textContent = 'Authentication failed';
                 }
             })
-            .catch(error => {
-                console.error('Error during authentication:', error);
-                uploadResultMessage.textContent = 'Error during authentication process. Please try again.';
-            });
+            // .catch(error => {
+            //     console.error('Error during authentication:', error);
+            //     uploadResultMessage.textContent = 'Error during authentication process. Please try again.';
+            // });
         }
         </script>
     </body>

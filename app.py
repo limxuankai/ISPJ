@@ -226,30 +226,39 @@ def authenticate():
     if "image" not in request.form:
         return jsonify({"error": "No image data found"}), 400
     image_name = save_image(request.form["image"])
-    try:
+    # try:
+    if 1 == 1:
         response = requests.put(
             "https://rd376l6qic.execute-api.ap-southeast-2.amazonaws.com/dev/ispj-is-extremely-fun-visitor/{}.jpeg".format(image_name),
             headers={"Content-Type": "image/jpeg"},
             data=base64.b64decode(request.form["image"].split(",")[1]),
         )
+        print("PUT response content:", response.content) 
         if response.status_code == 200:
             auth_response = requests.get(
                 "https://rd376l6qic.execute-api.ap-southeast-2.amazonaws.com/dev/employee",
                 params={"objectKey": "{}.jpeg".format(image_name)}
             )
+            print("GET response content:", auth_response.content)
             auth_data = auth_response.json()
             if auth_data.get("Message") == "Success":
                 # return jsonify({"success": True, "user": auth_data})
-            
+                aws_access_key_id = 'AKIA2LOZ4RPA6DWSOH3Q'
+                aws_secret_access_key = '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'
+                region_name = 'ap-southeast-2'
+                bucket_name = 'documents-for-ispj'
                 print(f"after authenticate {filename}")
-                token = jwt.encode({'filename': filename}, JWTSECRET_KEY, algorithm='HS256')
-                return redirect(url_for('presigned', token=token, success=True))
+                s3 = boto3.client('s3', aws_access_key_id=aws_access_key_id, aws_secret_access_key=aws_secret_access_key, region_name=region_name)
+                preview_presigned_url = generate_presigned_url(s3, bucket_name, filename, expiration_time=180, content_disposition='inline')
+                print(f"level 3{preview_presigned_url}")
+                return jsonify({"success": True, "user": preview_presigned_url})
+                
             else:
                 return jsonify({"success": False, "error": "Authentication failed"}), 401
         else:
             return jsonify({"success": False, "error": "Error during image upload"}), 500
-    except Exception as e:
-        return jsonify({"success": False, "error": str(e)}), 500
+    # except Exception as e:
+    #     return jsonify({"success": False, "error": str(e)}), 500
     
 @app.route('/presigned', methods=['GET','POST'])
 def presigned():
@@ -258,6 +267,18 @@ def presigned():
     aws_secret_access_key = 'vplLA68AUoM75+MEcTAhMzJIkNvM8HSOdBZglGuI'
     region_name = 'ap-southeast-2'
     bucket_name = 'documents-for-ispj'
+
+    success = request.args.get('success', False)
+    # if success:
+    #         token = request.args.get('token')
+    #         print("idk")
+    #         decoded_token = jwt.decode(token, JWTSECRET_KEY, algorithms=['HS256'])
+    #         filename = decoded_token.get('filename')
+    #         print(f"at faceauth {filename}")
+    #         s3 = boto3.client('s3', aws_access_key_id=aws_access_key_id, aws_secret_access_key=aws_secret_access_key, region_name=region_name)
+    #         preview_presigned_url = generate_presigned_url(s3, bucket_name, filename, expiration_time=180, content_disposition='inline')
+    #         print(f"level 3{preview_presigned_url}")
+    #         return redirect(preview_presigned_url, code=302)
     
     filename = request.args.get('filename')   
     Connection_Database = mysql.connector.connect(host=IPAddr, user="root", database="ispj", password="")
@@ -266,22 +287,9 @@ def presigned():
     Cursor.execute(query)
     FileLevel = Cursor.fetchone()
 
-
     Cursor.close()
     Connection_Database.close()
 
-    success = request.args.get('success', False)
-    if success:
-        token = request.args.get('token')
-        print("idk")
-        decoded_token = jwt.decode(token, JWTSECRET_KEY, algorithms=['HS256'])
-        filename = decoded_token.get('filename')
-        print(f"at faceauth {filename}")
-        s3 = boto3.client('s3', aws_access_key_id=aws_access_key_id, aws_secret_access_key=aws_secret_access_key, region_name=region_name)
-        preview_presigned_url = generate_presigned_url(s3, bucket_name, filename, expiration_time=180, content_disposition='inline')
-        print(preview_presigned_url)
-        return redirect(preview_presigned_url, code=302)
-        
     if not success and FileLevel[0] == 3:
         print("pass if")
         # Check if the authentication was successful
@@ -295,6 +303,7 @@ def presigned():
    
     s3 = boto3.client('s3', aws_access_key_id=aws_access_key_id, aws_secret_access_key=aws_secret_access_key, region_name=region_name)
     preview_presigned_url = generate_presigned_url(s3, bucket_name, filename, expiration_time=180, content_disposition='inline')
+    print(f"level 1{preview_presigned_url}")
     return redirect(preview_presigned_url, code=302)
 
 def generate_presigned_url(s3_client, bucket, key, expiration_time, content_disposition='inline'):
