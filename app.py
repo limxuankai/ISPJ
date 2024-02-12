@@ -263,7 +263,9 @@ def authenticate():
 def verify():
     if request.method == 'POST':
         entered_password = request.form.get('password')
-        filename = request.args.get('filename')
+        token = request.args.get('token')
+        decoded_token = jwt.decode(token, JWTSECRET_KEY, algorithms=['HS256'])
+        filename = decoded_token.get('filename')
         Connection_Database = mysql.connector.connect(host=IPAddr, user="root", database="ispj", password="")
         Cursor = Connection_Database.cursor()
         query = f"SELECT Password FROM document WHERE Name = '{filename}' "
@@ -272,8 +274,8 @@ def verify():
         hashed_password = hashed_password[0]
         hashed_password = hashed_password.encode('utf8')
         if check_password(entered_password, hashed_password):
-            # Password is correct, redirect to success page
-            return redirect(url_for('presigned',filename=filename, success=True))
+            
+            return redirect(url_for('presigned',filename=filename,success=True))
         else:
             print("password is incorrect")
             # Password is incorrect, you may want to show an error message
@@ -328,7 +330,8 @@ def presigned():
 
 
     if FileLevel[0] == 2 or FileLevel[0] ==3:
-        return redirect(url_for("verify", filename=filename))
+        token = jwt.encode({'filename': filename}, JWTSECRET_KEY, algorithm='HS256')
+        return redirect(url_for("verify", token=token))
     
     Cursor = Connection_Database.cursor()
     query = f"SELECT Level, Role FROM user WHERE Email = '{current_user.email}' "
