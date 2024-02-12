@@ -272,19 +272,33 @@ def presigned():
     query = f"SELECT Access_Level FROM document WHERE Name = '{filename}' "
     Cursor.execute(query)
     FileLevel = Cursor.fetchone()
+    
     Cursor.close()
-    Connection_Database.close()
+    
 
     if not success and FileLevel[0] == 3:
         success = request.args.get('success', False)
         if not success:
             token = jwt.encode({'filename': filename}, JWTSECRET_KEY, algorithm='HS256')
             return redirect(url_for('faceauth', token=token))
-   
-    s3 = boto3.client('s3', aws_access_key_id=aws_access_key_id, aws_secret_access_key=aws_secret_access_key, region_name=region_name)
-    preview_presigned_url = generate_presigned_url(s3, bucket_name, filename, expiration_time=180, content_disposition='inline')
-    print(f"level 1{preview_presigned_url}")
-    return redirect(preview_presigned_url, code=302)
+        
+    
+    Cursor = Connection_Database.cursor()
+    query = f"SELECT Level, Role FROM user WHERE Email = '{current_user.email}' "
+    Cursor.execute(query)
+    userinfo = Cursor.fetchone()
+    Level = userinfo[0]
+    print(Level)
+    Role = userinfo[1]
+    print(Role)
+    print(FileLevel)
+    Cursor.close()
+    Connection_Database.close()
+    if Level >= FileLevel[0] or Role == "Admin":
+        s3 = boto3.client('s3', aws_access_key_id=aws_access_key_id, aws_secret_access_key=aws_secret_access_key, region_name=region_name)
+        preview_presigned_url = generate_presigned_url(s3, bucket_name, filename, expiration_time=180, content_disposition='inline')
+        print(f"level 1{preview_presigned_url}")
+        return redirect(preview_presigned_url, code=302)
 
 def generate_presigned_url(s3_client, bucket, key, expiration_time, content_disposition='inline'):
     #Generate a pre-signed URL for the S3 object with a specific expiration time
