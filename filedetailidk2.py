@@ -1,11 +1,18 @@
 class docdetail2:
-    def __init__(self, FileID, FileName, Status, AccessLevel, UserID):
+    def __init__(self, FileID, FileName, Status, AccessLevel, UserID, Token):
         self.__FileID = FileID
         self.__FileName = FileName
         self.__Status = Status
         self.__AccessLevel = AccessLevel
         self.__UserID = UserID
-    
+        self.__Token = Token
+
+    def get_token(self):
+        return self.__Token
+
+    def set_token(self, value):
+        self.__Token = value
+
     def get_fileid(self):
         return self.__FileID
 

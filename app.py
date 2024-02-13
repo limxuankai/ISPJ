@@ -42,6 +42,7 @@ from test import generatekey, Evaluate_Key
 from encryption import encrypt, decrypt
 import io
 import time
+import random
 
 app = Flask(__name__)
 CORS(app)  # Allow cross-origin requests
@@ -53,6 +54,7 @@ JWTSECRET_KEY = 'Ispjsofun'
 IPAddr = "104.196.231.172"
 
 scheduled_deletions = {}
+expiration_time_token = datetime.utcnow() + timedelta(hours=1)
 
 app.logger.setLevel(logging.INFO)
 for handler in app.logger.handlers[:]:
@@ -274,8 +276,8 @@ def verify():
         hashed_password = hashed_password[0]
         hashed_password = hashed_password.encode('utf8')
         if check_password(entered_password, hashed_password):
-            
-            return redirect(url_for('presigned',filename=filename,success=True))
+            token = jwt.encode({'filename': filename, 'success': True, 'exp': expiration_time_token}, JWTSECRET_KEY, algorithm='HS256')
+            return redirect(url_for('presigned',token=token))
         else:
             print("password is incorrect")
             # Password is incorrect, you may want to show an error message
@@ -296,9 +298,13 @@ def presigned():
     aws_secret_access_key = 'vplLA68AUoM75+MEcTAhMzJIkNvM8HSOdBZglGuI'
     region_name = 'ap-southeast-2'
     bucket_name = 'documents-for-ispj'
+    success = False
+    token = request.args.get('token')
     
-    filename = request.args.get('filename')  
-    success = request.args.get('success', False) 
+    decoded_token = jwt.decode(token, JWTSECRET_KEY, algorithms=['HS256'])
+    filename = decoded_token.get('filename')
+    success = decoded_token.get('success',False)
+     
     Connection_Database = mysql.connector.connect(host=IPAddr, user="root", database="ispj", password="")
     Cursor = Connection_Database.cursor()
     query = f"SELECT Access_Level FROM document WHERE Name = '{filename}' "
@@ -307,7 +313,7 @@ def presigned():
     
     Cursor.close()
     if FileLevel[0] == 3 and success:
-        token = jwt.encode({'filename': filename}, JWTSECRET_KEY, algorithm='HS256')
+        token = jwt.encode({'filename': filename, 'exp': expiration_time_token}, JWTSECRET_KEY, algorithm='HS256')
         return redirect(url_for('faceauth', token=token))
         
     if success:
@@ -330,7 +336,7 @@ def presigned():
 
 
     if FileLevel[0] == 2 or FileLevel[0] ==3:
-        token = jwt.encode({'filename': filename}, JWTSECRET_KEY, algorithm='HS256')
+        token = jwt.encode({'filename': filename, 'exp': expiration_time_token}, JWTSECRET_KEY, algorithm='HS256')
         return redirect(url_for("verify", token=token))
     
     Cursor = Connection_Database.cursor()
@@ -460,8 +466,11 @@ def files():
             Cursor.execute(query)
             filedetailss = Cursor.fetchall()
             print("got filedetails")
+            
             for row in filedetailss:
-                fileliste.append(docdetail2(row[0], row[1], row[2], row[3], row[4]))
+                filename = row[1]
+                token = jwt.encode({'filename': filename}, JWTSECRET_KEY, algorithm='HS256')
+                fileliste.append(docdetail2(row[0], row[1], row[2], row[3], row[4],token))
                 print("in for loop")
             Cursor.close()
             Connection_Database.close()
@@ -516,11 +525,11 @@ def upload():
                 print('still testing')
                 s3 = boto3.client('s3', aws_access_key_id=aws_access_key_id, aws_secret_access_key=aws_secret_access_key, region_name=region_name)
                 s3.upload_fileobj(encrypted_file, bucket_name, uploaded_file.filename)
-
+                random_level = random.randint(1, 3)
                 print({current_user.id})
                 Connection_Database = mysql.connector.connect(host=IPAddr, user="root", database="ispj", password="")
                 Cursor = Connection_Database.cursor()
-                query = f"INSERT INTO document (ID, Name, Status, Access_Level,User_ID, QUBITS, LIST, Password) VALUES ('{uuid.uuid4()}','{uploaded_file.filename}','BeforeML',1,'{current_user.id}', '{server_key}', '{server_table}', '{hashed_password.decode('utf-8')}')"
+                query = f"INSERT INTO document (ID, Name, Status, Access_Level,User_ID, QUBITS, LIST, Password) VALUES ('{uuid.uuid4()}','{uploaded_file.filename}','AfterML',{random_level},'{current_user.id}', '{server_key}', '{server_table}', '{hashed_password.decode('utf-8')}')"
                 Cursor.execute(query)
                 Connection_Database.commit()
                 Cursor.close()

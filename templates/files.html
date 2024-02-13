@@ -48,7 +48,7 @@
             {% if i.get_accesslevel() == 3 and i.get_status() == "Classified" %}
                 <tr>
                     <td>{{i.get_fileid()}}</td>
-                    <td><a href="{{ url_for('presigned', filename=i.get_filename()) }}">{{i.get_filename()}}</a></td>
+                    <td><a href="{{ url_for('presigned', token=i.get_token()) }}">{{i.get_filename()}}</a></td>
                     <td>{{i.get_accesslevel()}}</td>
                     {% if i.get_userid() == userid or userid == "105552234048794201768" %}
                     <td>
@@ -66,7 +66,7 @@
             {% if i.get_accesslevel() == 2 and i.get_status() == 'Classified' %}
                 <tr>
                     <td>{{i.get_fileid()}}</td>
-                    <td><a href="{{ url_for('presigned', filename=i.get_filename()) }}">{{i.get_filename()}}</a></td>
+                    <td><a href="{{ url_for('presigned', token=i.get_token()) }}">{{i.get_filename()}}</a></td>
                     <td>{{i.get_accesslevel()}}</td>
                     {% if i.get_userid() == userid or userid == "105552234048794201768" %}
                     <td>
@@ -84,7 +84,7 @@
             {% if i.get_accesslevel() == 1 and i.get_status() == "Classified" %}
                 <tr>
                     <td>{{i.get_fileid()}}</td>
-                    <td><a href="{{ url_for('presigned', filename=i.get_filename()) }}">{{i.get_filename()}}</a></td>
+                    <td><a href="{{ url_for('presigned', token=i.get_token()) }}">{{i.get_filename()}}</a></td>
                     <td>{{i.get_accesslevel()}}</td>
                     {% if i.get_userid() == userid or userid == "105552234048794201768" %}
                     <td>
