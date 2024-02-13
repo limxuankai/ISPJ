@@ -38,7 +38,7 @@
                 <td>{{i.get_filename()}}</td>
                 <td>{{i.get_accesslevel()}}</td>
                 <td>{{i.get_User()}}</td>
-                <td><a href="{{ url_for('presigned', filename=i.get_filename()) }}">Download</a></td>
+                <td><a href="{{ url_for('presigned', token=i.get_token()) }}">Download</a></td>
             </tr>
         {% endif %}
     {% endfor %}
@@ -50,7 +50,7 @@
               <td>{{i.get_filename()}}</td>
               <td>{{i.get_accesslevel()}}</td>
               <td>{{i.get_User()}}</td>
-              <td><a href="{{ url_for('presigned', filename=i.get_filename()) }}">Download</a></td>
+              <td><a href="{{ url_for('presigned', token=i.get_token()) }}">Download</a></td>
             </tr>
         {% endif %}
     {% endfor %}
@@ -62,7 +62,7 @@
                 <td>{{i.get_filename()}}</td>
                 <td>{{i.get_accesslevel()}}</td>
                 <td>{{i.get_User()}}</td>
-                <td><a href="{{ url_for('presigned', filename=i.get_filename()) }}">Download</a></td>
+                <td><a href="{{ url_for('presigned', token=i.get_token()) }}">Download</a></td>
             </tr>
         {% endif %}
     {% endfor %}

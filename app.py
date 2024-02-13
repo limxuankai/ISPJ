@@ -154,12 +154,16 @@ def dashboard():
     check_and_delete("static/files/")
     accessliste = []
     useraccessliste = []
+    List_Files = []
     User_Role = sql_query(f"SELECT ROLE FROM user WHERE ID={current_user.id}")
     app.logger.info(f'{current_user.name} has arrived at dashboard')
     if User_Role[0][0] != 'Admin':
         Access_Level = sql_query(f"SELECT Level FROM user WHERE Email = '{current_user.email}'")
         Files = sql_query(f"SELECT ID, Name, Status, Access_Level, User_ID FROM document WHERE Access_Level <= {Access_Level[0][0]}")
-        List_Files = [docdetail(row[0],row[1],row[2],row[3], row[4]) for row in Files]
+        for row in Files:
+            filename = row[1]
+            token = jwt.encode({'filename': filename}, JWTSECRET_KEY, algorithm='HS256')
+            List_Files.append(docdetail(row[0],row[1],row[2],row[3], row[4],token))
         return render_template("dashboard.html", fileliste = List_Files, user=current_user)
     else:
         Connection_Database = mysql.connector.connect(host=IPAddr, user="root", database="ispj", password="")
@@ -168,10 +172,12 @@ def dashboard():
         Cursor.execute(query)
         changeaccess = Cursor.fetchall()
         for row in changeaccess:
-            accessliste.append(docdetail(row[0], row[1], row[2], row[3],row[4]))
-        Cursor.close()
-        Cursor = Connection_Database.cursor()
-        Connection_Database.close()
+            filename = row[1]
+            token = jwt.encode({'filename': filename}, JWTSECRET_KEY, algorithm='HS256')
+            accessliste.append(docdetail(row[0], row[1], row[2], row[3],row[4],token))
+        
+        
+        
         query_2 = "SELECT Email, ROLE, Level, ID FROM user WHERE ROLE = 'User'"
         Cursor.execute(query_2)
         result_set_2 = Cursor.fetchall()
@@ -384,6 +390,7 @@ def update_fileaccess():
         Connection_Database.commit()
         Cursor.close()
         Connection_Database.close()
+        print('successfully changed file access level')
         # Your existing code to update the database based on fileid and selected_accesslevel
 
         # Assuming you want to return some response data (e.g., JSON)
@@ -490,11 +497,6 @@ def upload():
     region_name = 'ap-southeast-2'
     bucket_name = 'documents-for-ispj'
 
-
-
-
-
-
     uploaded_file = request.files['file']
     expiration_time = request.form['auto']
     docpassword = request.form['password']
@@ -507,12 +509,8 @@ def upload():
     encryted_file = encrypt(encryted_file, KEY)
     encrypted_file = io.BytesIO(encryted_file)
     server_table = (','.join(server_table))
-
-    result = 'success'  # Default to success
-
-
     client_table = (','.join(client_table))
-
+    result = 'fail'  # Default to success
 
     if uploaded_file.filename != '':
         if expiration_time != '':
@@ -544,7 +542,7 @@ def upload():
             except Exception as e:
                 print(f'Failed to upload or update db: {e}')
                 result = 'fail'
-
+    print(result)
     return jsonify(result)
 
 def schedule_deletion(filename, expiration_hours):
@@ -564,20 +562,23 @@ def schedule_deletion(filename, expiration_hours):
 def delayed_deletion(filename, delay_seconds):
     # Wait for the specified delay
     time.sleep(delay_seconds)
-    aws_access_key_id = 'AKIA2LOZ4RPA6DWSOH3Q'
-    aws_secret_access_key = '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'
-    region_name = 'ap-southeast-2'
-    bucket_name = 'documents-for-ispj'
-    s3 = boto3.client('s3', aws_access_key_id=aws_access_key_id, aws_secret_access_key=aws_secret_access_key, region_name=region_name)
-    s3.delete_object(Bucket=bucket_name, Key=filename)
-    Connection_Database = mysql.connector.connect(host=IPAddr, user="root", database="ispj", password="")
-    Cursor = Connection_Database.cursor()
-    query3 = f"DELETE FROM document WHERE Name = '{filename}';"
-    Cursor.execute(query3)
-    Connection_Database.commit()
-    Cursor.close()
-    Connection_Database.close()
-    print("auto deleted")
+    try:
+        aws_access_key_id = 'AKIA2LOZ4RPA6DWSOH3Q'
+        aws_secret_access_key = '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'
+        region_name = 'ap-southeast-2'
+        bucket_name = 'documents-for-ispj'
+        s3 = boto3.client('s3', aws_access_key_id=aws_access_key_id, aws_secret_access_key=aws_secret_access_key, region_name=region_name)
+        s3.delete_object(Bucket=bucket_name, Key=filename)
+        Connection_Database = mysql.connector.connect(host=IPAddr, user="root", database="ispj", password="")
+        Cursor = Connection_Database.cursor()
+        query3 = f"DELETE FROM document WHERE Name = '{filename}';"
+        Cursor.execute(query3)
+        Connection_Database.commit()
+        Cursor.close()
+        Connection_Database.close()
+        print("auto deleted")
+    except Exception as e:
+        print(e)
 
 
 

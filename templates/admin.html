@@ -27,7 +27,7 @@
             {% for i in accessliste %} 
             <tr>
                 <td>{{i.get_fileid()}}</td>
-                <td><a href="{{ url_for('presigned', filename=i.get_filename()) }}">{{i.get_filename()}}</a></td>
+                <td><a href="{{ url_for('presigned', token=i.get_token()) }}">{{i.get_filename()}}</a></td>
                 <td>
                     <form id="updateForm_{{i.get_fileid()}}" onsubmit="updateFileAccess(event, '{{i.get_fileid()}}')">
                         <label for="fileaccess">Select Access Level:</label>
