@@ -3,62 +3,77 @@
 <head>
     <link rel="stylesheet" href="https://www.w3schools.com/w3css/4/w3.css">
     <link rel="stylesheet" href="/static/styles/style.css">
+    <link rel="icon" href="https://img.icons8.com/plasticine/100/box-lock-1.png" alt="box-lock-1"/>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% block title %} {% endblock %}</title>
+
+    <title>{% block title %} Admin Dashboard {% endblock %}</title>
 </head>
 {% block navbar %}
 {% include 'includes/acc_nav.html' %} 
 {% endblock %}
 {% block content %}
-<body>
-
-    {{ popup | safe }}
-    <h2 style="padding-top: 60px;">change file access level</h2>
-    {% for i in accessliste %} 
-    
-    <div style="display: flex">
-        <div style="padding-right: 20px;">{{i.get_fileid()}} <br></div>
-        <a href="{{ url_for('presigned', filename=i.get_filename()) }}">
-            <div style="margin-right: 20px;">{{i.get_filename()}}</div>
-        </a>
-        <form id="updateForm_{{i.get_fileid()}}" onsubmit="updateFileAccess(event, '{{i.get_fileid()}}')">
-            <label for="fileaccess">Select Access Level:</label>
-            <select name="fileaccess" id="fileaccess">
-                <option value="1" {% if i.get_accesslevel() == 1 %} selected {% endif %}>1</option>
-                <option value="2" {% if i.get_accesslevel() == 2 %} selected {% endif %}>2</option>
-                <option value="3" {% if i.get_accesslevel() == 3 %} selected {% endif %}>3</option>
-            </select>
+<body>   
+    <div class="w3-container">
+        {{ popup | safe }}
+        <h2 class="w3-padding-top">Change File Access Level</h2>
+        <table class="w3-table-all w3-card-4">
+            <tr>
+                <th>File ID</th>
+                <th>File Name</th>
+                <th>Access Level</th>
+                <th>Action</tr>
+            </tr>
+            {% for i in accessliste %} 
+            <tr>
+                <td>{{i.get_fileid()}}</td>
+                <td><a href="{{ url_for('presigned', filename=i.get_filename()) }}">{{i.get_filename()}}</a></td>
+                <td>
+                    <form id="updateForm_{{i.get_fileid()}}" onsubmit="updateFileAccess(event, '{{i.get_fileid()}}')">
+                        <label for="fileaccess">Select Access Level:</label>
+                        <select name="fileaccess" id="fileaccess" class="w3-select">
+                            <option value="1" {% if i.get_accesslevel() == 1 %} selected {% endif %}>1</option>
+                            <option value="2" {% if i.get_accesslevel() == 2 %} selected {% endif %}>2</option>
+                            <option value="3" {% if i.get_accesslevel() == 3 %} selected {% endif %}>3</option>
+                        </select>
+                        <!-- Hidden input for FileID -->
+                        <input type="hidden" name="fileid" value="{{ i.get_fileid() }}">
+                    </form>
+                </td>
+                <td><button type="submit" form="updateForm_{{i.get_fileid()}}" class="w3-button w3-blue">Update</button></td>
+            </tr>
+            {% endfor %}
+        </table>
             
-            <!-- Hidden input for FileID -->
-            <input type="hidden" name="fileid" value="{{ i.get_fileid() }}">
-            
-            <button type="submit">Update</button>
-        </form>
-    </div>  
-{% endfor %}
-        
-    <h2 style="padding-top: 10px;">change user access level</h2>
-    {% for i in useraccessliste %} 
-    
-    <div style="display: flex">
-        <div style="padding-right: 20px;">{{i.get_user()}} <br></div>
-        <div style="padding-right: 20px;">{{i.get_id()}} </div>
-        <form id="updateForm_{{i.get_id()}}" onsubmit="updateUserAccess(event, '{{i.get_id()}}')">
-            <label for="useraccess">Select User Access Level:</label>
-            <select name="useraccess" id="useraccess">
-                <option value="1" {% if i.get_userlevel() == 1 %} selected {% endif %}>1</option>
-                <option value="2" {% if i.get_userlevel() == 2 %} selected {% endif %}>2</option>
-                <option value="3" {% if i.get_userlevel() == 3 %} selected {% endif %}>3</option>
-            </select>
-            
-            <!-- Hidden input for FileID -->
-            <input type="hidden" name="userid" value="{{ i.get_id() }}">
-            
-            <button type="submit">Update</button>
-        </form>
-    </div>  
-{% endfor %}
+        <h2 class="w3-padding-top">Change User Access Level</h2>
+        <table class="w3-table-all w3-card-4">
+            <tr>
+                <th>User</th>
+                <th>User ID</th>
+                <th>Access Level</th>
+                <th>Action</th>
+            </tr>
+            {% for i in useraccessliste %} 
+            <tr>
+                <td>{{i.get_user()}}</td>
+                <td>{{i.get_id()}}</td>
+                <td>
+                    <form id="updateForm_{{i.get_id()}}" onsubmit="updateUserAccess(event, '{{i.get_id()}}')">
+                        <label for="useraccess">Select User Access Level:</label>
+                        <select name="useraccess" id="useraccess" class="w3-select">
+                            <option value="1" {% if i.get_userlevel() == 1 %} selected {% endif %}>1</option>
+                            <option value="2" {% if i.get_userlevel() == 2 %} selected {% endif %}>2</option>
+                            <option value="3" {% if i.get_userlevel() == 3 %} selected {% endif %}>3</option>
+                        </select>
+                        <!-- Hidden input for UserID -->
+                        <input type="hidden" name="userid" value="{{ i.get_id() }}">
+                    </form>
+                </td>
+                <td><button type="submit" form="updateForm_{{i.get_id()}}" class="w3-button w3-blue">Update</button></td>
+            </tr>
+            {% endfor %}
+        </table>
+    </div>
 </body>
 <script>
     function updateFileAccess(event, fileid) {

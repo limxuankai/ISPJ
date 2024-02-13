@@ -3,28 +3,42 @@
 <head>
     <link rel="stylesheet" href="https://www.w3schools.com/w3css/4/w3.css">
     <link rel="stylesheet" href="/static/styles/style.css">
+    <link rel="icon" href="https://img.icons8.com/plasticine/100/box-lock-1.png" alt="box-lock-1"/>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% block title %} {% endblock %}</title>
+    <title>{% block title %} Dashboard {% endblock %}</title>
 </head>
 {% block navbar %}
 {% include 'includes/acc_nav.html' %} 
 {% endblock %}
-<body>
 {% block content %}
-<table style="margin-top: 60px;">
-    <tr>
-        <th>File ID</th>
-        <th>File Name</th>
-        <th>File Access Level</th>
-    </tr>
-
-    {% for i in fileliste %}
+</head>
+<body>
+  <div class="container" style="margin-top: 20px;">
+    <img src="{{ user.profile_pic }}" alt="Avatar" class="w3-left w3-circle w3-margin-right" style="width:60px">
+    <h4>{{ user.name }}</h4><br>
+    <h2 class="w3-center">Files</h2>
+    <hr class="w3-clear">
+  </div>   
+    <table class="w3-table-all file_table w3-card-4 ">
+      <thead>
+        <tr>
+          <th>File ID</th>
+          <th>File Name</th>
+          <th>Access Level</th>
+          <th>Uploaded By</th>
+          <th>Action</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for i in fileliste %}
         {% if i.get_accesslevel() == 3 and i.get_status() == "Classified" %}
             <tr>
                 <td>{{i.get_fileid()}}</td>
-                <td><a href="{{ url_for('presigned', filename=i.get_filename()) }}">{{i.get_filename()}}</a></td>
+                <td>{{i.get_filename()}}</td>
                 <td>{{i.get_accesslevel()}}</td>
+                <td>{{i.get_User()}}</td>
+                <td><a href="{{ url_for('presigned', filename=i.get_filename()) }}">Download</a></td>
             </tr>
         {% endif %}
     {% endfor %}
@@ -32,9 +46,11 @@
     {% for i in fileliste %}
         {% if i.get_accesslevel() == 2 and i.get_status() == 'Classified' %}
             <tr>
-                <td>{{i.get_fileid()}}</td>
-                <td><a href="{{ url_for('presigned', filename=i.get_filename()) }}">{{i.get_filename()}}</a></td>
-                <td>{{i.get_accesslevel()}}</td>
+              <td>{{i.get_fileid()}}</td>
+              <td>{{i.get_filename()}}</td>
+              <td>{{i.get_accesslevel()}}</td>
+              <td>{{i.get_User()}}</td>
+              <td><a href="{{ url_for('presigned', filename=i.get_filename()) }}">Download</a></td>
             </tr>
         {% endif %}
     {% endfor %}
@@ -42,38 +58,18 @@
     {% for i in fileliste %} 
         {% if i.get_accesslevel() == 1 and i.get_status() == "Classified" %}
             <tr>
-                <td>{{i.get_fileid()}}</td>
-                <td><a href="{{ url_for('presigned', filename=i.get_filename()) }}">{{i.get_filename()}}</a></td>
+                                <td>{{i.get_fileid()}}</td>
+                <td>{{i.get_filename()}}</td>
                 <td>{{i.get_accesslevel()}}</td>
+                <td>{{i.get_User()}}</td>
+                <td><a href="{{ url_for('presigned', filename=i.get_filename()) }}">Download</a></td>
             </tr>
         {% endif %}
     {% endfor %}
-    
-</table>
-<style>
-    table {
-        width: 100%;
-        border-collapse: collapse;
-        margin-bottom: 20px;
-        margin-top: 20px;
-    }
+      </tbody>
+    </table>
+  </div>
 
-    th, td {
-        border: 1px solid #ddd;
-        padding: 8px;
-        text-align: left;
-    }
-
-    th {
-        background-color: #f2f2f2;
-    }
-
-    a {
-        text-decoration: none;
-        color: #333;
-    }
-
-</style>
 {% endblock %}
 </body>
 {% block scripts %} {% endblock %}
