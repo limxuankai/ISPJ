@@ -511,7 +511,8 @@ def upload():
     server_table = (','.join(server_table))
     client_table = (','.join(client_table))
     result = 'fail'  # Default to success
-
+    client = [client_key, client_table]
+    print(client)
     if uploaded_file.filename != '':
         if expiration_time != '':
             expiration_time = float(request.form['auto'])
@@ -542,7 +543,7 @@ def upload():
             except Exception as e:
                 print(f'Failed to upload or update db: {e}')
                 result = 'fail'
-    print(result)
+
     return jsonify(result)
 
 def schedule_deletion(filename, expiration_hours):
